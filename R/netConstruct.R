@@ -82,7 +82,9 @@
 #'   \code{"VST"} \tab Variance stabilizing transformation\tab
 #'   \code{\link[DESeq2]{varianceStabilizingTransformation}}\cr
 #'   \code{"clr"} \tab Centered log-ratio transformation\tab
-#'   \code{\link[robCompositions]{cenLR}}
+#'   \code{\link[robCompositions]{cenLR}\cr
+#'   \code{"mclr"} \tab Modified central log ratio transformation\tab
+#'   \code{\link[SPRING]{mclr}}
 #'   }
 #'   These methods (except rarefying) are described in
 #'   \cite{Badri et al.(2018)}.
@@ -181,7 +183,7 @@
 #' @param normMethod character indicating the normalization method (in order to
 #'   make counts of different samples comparable). Possible options are:
 #'   \code{"none"} (default), \code{"TSS"} (or \code{"fractions"}), \code{"CSS"},
-#'   \code{"COM"}, \code{"rarefy"}, \code{"VST"}, \code{"clr"}.
+#'   \code{"COM"}, \code{"rarefy"}, \code{"VST"}, \code{"clr"}, and \code{mclr}.
 #'   The corresponding parameters are set via \code{normPar}.
 #' @param normPar list with parameters passed to the function for normalization
 #'   (defined by \code{normMethod}).
@@ -496,8 +498,8 @@ netConstruct <- function(data,
                                       "multRepl", "alrEM", "bayesMult"))
 
   normMethod <- match.arg(normMethod,
-                          choices = c("none", "fractions", "TSS",
-                                      "CSS", "COM", "rarefy", "VST", "clr"))
+                          choices = c("none", "fractions", "TSS", "CSS", "COM", 
+                                      "rarefy", "VST", "clr", "mclr"))
 
   adjust <- match.arg(adjust, c(p.adjust.methods, "lfdr", "adaptBH"))
 

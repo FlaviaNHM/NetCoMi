@@ -1,7 +1,6 @@
 norm_counts <- function(countMat, normMethod, normParam, zeroMethod, needfrac,
                         verbose){
 
-
   if(normMethod == "none"){
     countMat_norm <- countMat
     if(needfrac){
@@ -116,9 +115,15 @@ norm_counts <- function(countMat, normMethod, normParam, zeroMethod, needfrac,
     if(verbose %in% 2:3) message("Done.")
 
     attributes(countMat_norm)$scale <- "clr transformed"
+    
+  } else if(normMethod == "mclr"){
+    normParam$dat <- countMat
+    countMat_norm <- do.call("mclr", normParam)
+ 
   } else{
     warning("No normalization conducted. ",
-    "'normMethod' must be one of 'none', 'pseudo', 'multRepl', 'alrEM', 'bayesMult'.")
+    "'normMethod' must be one of 'none', 'TSS', 'fractions', 'CSS', 'COM', 
+    'rarefy', 'VST', 'clr', 'mclr'.")
   }
 
   return(countMat_norm)
