@@ -149,7 +149,7 @@
 #'   \code{nodeFilter}.
 #' @param rmSingles character value indicating how to handle unconnected nodes.
 #'   Possible values are \code{"all"} (all single nodes are deleted),
-#'   \code{"inBoth"} (only nodes that are unconnected in both networks are
+#'   \code{"inboth"} (only nodes that are unconnected in both networks are
 #'   removed) or \code{"none"} (default; no nodes are removed). Cannot be set to
 #'   \code{"all"}, if the same layout is used for both networks.
 #' @param nodeSize  character indicating how node sizes should be determined.
@@ -157,12 +157,19 @@
 #'   \item{\code{"fix"}}{Default. All nodes have same size (hub size can be
 #'   defined separately via \code{cexHubs}).}
 #'   \item{\code{"degree"}, \code{"betweenness"}, \code{"closeness"},
-#'   \code{"eigenvector"}}{Size scaled according to node's degree.}
+#'   \code{"eigenvector"}}{Size scaled according to node's centrality.}
 #'   \item{\code{"counts"}}{Size scaled according to the sum of counts (of
 #'   microbes or samples, depending on what nodes express).}
 #'   \item{\code{"normCounts"}}{Size scaled according to the sum of normalized
 #'   counts (of microbes or samples), which are exported by
-#'   \code{netConstruct}.}}
+#'   \code{netConstruct}.}
+#'   \item{\code{"TSS", "fractions", "CSS", "COM", "rarefy", "VST", "clr", 
+#'   "mclr"}}{Size scaled according to the sum of normalized
+#'   counts. Available are the same options as for \code{normMethod} in
+#'   \code{\link{netConstruct}}.}}
+#' @param normParam usage equal to argument \code{normParam} of 
+#'   \code{\link{netConstruct}} if one of the normalization methods is used for
+#'   node scaling (argument \code{nodeSize})
 #' @param nodeSizeSpread positive numeric value indicating the spread of node
 #'   sizes. The smaller the value, the more similar are the node sizes. Node 
 #'   sizes are calculated by: (x - min(x)) / (max(x) - min(x)) * nodeSizeSpread 
@@ -177,14 +184,29 @@
 #'   \code{grDevices} package  is used. Also accecpted is a character value
 #'   defining a color, which is used for all nodes. If \code{NULL}, "grey40" is
 #'   used for all nodes.
-#' @param colorVec a vector specifying the node colors. If \code{nodeColor}
-#'   is set to \code{"colorVec"}, the vector defines a color for each node
-#'   implying that its names must match the node's names (ensured if names match
-#'   the colnames of the original count matrix).
+#' @param colorVec a vector or list with two vectors used to specify node colors. 
+#'   Different usage depending on the "nodeColor" argument:
+#'   \describe{
+#'   \item{\code{nodeColor = "cluster"}}{\code{colorVec} must be a vector. 
+#'   Depending on the \code{sameClustCol} argument, the colors are used only in 
+#'   one or both networks. If the vector is not long enough, a warning is 
+#'   returned and colors from \code{rainbow()} are used for the remaining 
+#'   clusters.}
+#'   \item{\code{nodeColor = "feature"}}{Defines a color for each level of 
+#'   \code{featVecCol}. Can be a list with two vectors used for the two networks (for a single 
+#'   network, only the first element is used) or a vector, which is used for 
+#'   both groups if two networks are plotted.}
+#'   \item{\code{nodeColor = "colorVec"}}{\code{colorVec} defines a color for 
+#'   each node implying that its names must match the node's names (which is 
+#'   also ensured if names match the colnames of the original count matrix). 
+#'   Can be a list with two vectors used for the two networks (for a single 
+#'   network, only the first element is used) or a vector, which is used for 
+#'   both groups if two networks are plotted.}}
 #' @param featVecCol  a vector with a feature for each node. Used for coloring
 #'   nodes if \code{nodeColor} is set to \code{"feature"}. Is coerced to a
 #'   factor. If \code{colorVec} is given, its length must be larger than or
 #'   equal to the number of feature levels.
+#' @param sameFeatCol 
 #' @param sameClustCol if TRUE (default) and two networks are plotted, clusters
 #'   having at least \code{sameColThresh} nodes in common have the same color.
 #'   Only used if \code{nodeColor} is set to \code{"cluster"}.
@@ -351,10 +373,12 @@ plot.microNetProps <- function(x,
                                nodeFilterPar = NULL,
                                rmSingles = "none",
                                nodeSize = "fix",
+                               normParam = NULL,
                                nodeSizeSpread = 4,
                                nodeColor = "cluster",
                                colorVec = NULL,
                                featVecCol = NULL,
+                               sameFeatCol = TRUE,
                                sameClustCol = TRUE,
                                sameColThresh = 2L,
                                nodeShape = NULL,
@@ -536,6 +560,11 @@ plot.microNetProps <- function(x,
   # node colors
 
   if(nodeColor == "cluster"){
+
+    if(!is.null(colorVec)){
+      stopifnot(is.vector(colorVec))
+    }
+
     clust1 <- x$clustering$clust1
     clust2 <- x$clustering$clust2
 
@@ -562,24 +591,49 @@ plot.microNetProps <- function(x,
     }
 
   } else if(nodeColor == "feature"){
+    
     featVecCol <- as.factor(featVecCol)
     stopifnot(all(colnames(adja1) %in% names(featVecCol)))
 
     if(is.null(colorVec)){
-      cols <- rainbow(length(levels(featVecCol)))
-    } else{
-      if(length(colorVec) < length(levels(featVecCol))){
-        stop(paste("Argument 'featVecCol' has", length(levels(featVecCol)),
-                   "levels but 'colorVec' has only length ", length(colorVec)))
+      if(sameFeatCol){
+        colorVec1 <- colorVec2 <- rainbow(length(levels(featVecCol)))
+      } else{
+        cols <- rainbow(2 * length(levels(featVecCol)))
+        colorVec1 <- cols[seq.int(1L, length(cols), 2L)]
+        colorVec2 <- cols[seq.int(2L, length(cols), 2L)]
       }
-      cols <- colorVec
+      
+    } else{
+      if(is.list(colorVec)){
+        stopifnot(length(colorVec) == 2)
+        colorVec1 <- colorVec[[1]]
+        colorVec2 <- colorVec[[2]]
+        
+        if(length(colorVec1) < length(levels(featVecCol)) || 
+           length(colorVec2) < length(levels(featVecCol))){
+          stop("Length of color vector(s) (argument 'colorVec') shorter than
+               number of levels of 'featVecCol'.")
+        }
+        
+      } else{
+        if(length(colorVec) < length(levels(featVecCol))){
+          stop(paste("Argument 'featVecCol' has", length(levels(featVecCol)),
+                     "levels but 'colorVec' has only length ", length(colorVec)))
+        }
+        
+        colorVec1 <- colorVec2 <- colorVec
+      }
+      
     }
 
     feature1 <- featVecCol[colnames(adja1)]
     nodecol1 <- character(length(feature1))
+    
     for(i in seq_along(levels(feature1))){
-      nodecol1[feature1 == levels(feature1)[i]] <- cols[i]
+      nodecol1[feature1 == levels(feature1)[i]] <- colorVec1[i]
     }
+    
     nodecol2 <- NULL
 
     if(twoNets){
@@ -587,19 +641,31 @@ plot.microNetProps <- function(x,
 
       feature2 <- featVecCol[colnames(adja2)]
       nodecol2 <- character(length(feature2))
+      
       for(i in seq_along(levels(feature2))){
-        nodecol2[feature2 == levels(feature2)[i]] <- cols[i]
+        nodecol2[feature2 == levels(feature2)[i]] <- colorVec2[i]
       }
     }
 
   } else if(nodeColor == "colorVec"){
-    stopifnot(all(colnames(adja1) %in% names(colorVec)))
-    nodecol1 <- colorVec[colnames(adja1)]
+
+    if(is.list(colorVec)){
+      stopifnot(length(colorVec) == 2)
+      colorVec1 <- colorVec[[1]]
+      colorVec2 <- colorVec[[2]]
+      
+    } else{
+      
+      colorVec1 <- colorVec2 <- colorVec
+    }
+    
+    stopifnot(all(colnames(adja1) %in% names(colorVec1)))
+    nodecol1 <- colorVec1[colnames(adja1)]
     nodecol2 <- NULL
 
     if(twoNets){
-      stopifnot(all(colnames(adja2) %in% names(colorVec)))
-      nodecol2 <- colorVec[colnames(adja2)]
+      stopifnot(all(colnames(adja2) %in% names(colorVec2)))
+      nodecol2 <- colorVec2[colnames(adja2)]
     }
 
   } else if(is.character(nodeColor)){
@@ -675,10 +741,11 @@ plot.microNetProps <- function(x,
   # define size of vertices
 
   if(!is.numeric(nodeSize)){
-    nodeSize1 <- get_node_size(nodeSize = nodeSize, 
+    nodeSize1 <- get_node_size(nodeSize = nodeSize, normParam = normParam,
                                nodeSizeSpread = nodeSizeSpread,
                                adja = adja1, countMat = x$input$countMat1,
-                               normCounts = x$input$normCounts1, kept = kept1,
+                               normCounts = x$input$normCounts1,
+                               assoType = x$input$assoType, kept = kept1,
                                cexNodes = cexNodes, cexHubs = cexHubs,
                                hubs = x$hubs$hubs1, 
                                highlightHubs = highlightHubs,
@@ -687,10 +754,11 @@ plot.microNetProps <- function(x,
                                close = x$centralities$close1,
                                eigen = x$centralities$eigenv1)
     if(twoNets){
-      nodeSize2 <- get_node_size(nodeSize = nodeSize, 
+      nodeSize2 <- get_node_size(nodeSize = nodeSize, normParam = normParam,
                                  nodeSizeSpread = nodeSizeSpread,
                                  adja = adja2, countMat = x$input$countMat2,
-                                 normCounts = x$input$normCounts2, kept = kept2,
+                                 normCounts = x$input$normCounts2, 
+                                 assoType = x$input$assoType, kept = kept2,
                                  cexNodes = cexNodes, cexHubs = cexHubs,
                                  hubs = x$hubs$hubs2, 
                                  highlightHubs = highlightHubs,
@@ -789,7 +857,7 @@ plot.microNetProps <- function(x,
   if(!is.null(cut) & (length(cut) == 1)){
     stopifnot(is.numeric(cut))
     cut1 <- cut2 <- cut
-  } else if(!is.null(cut) & (length(cut) == 1)){
+  } else if(!is.null(cut) & (length(cut) == 2)){
     stopifnot(is.numeric(cut))
     cut1 <- cut[1]
     cut2 <- cut[2]
@@ -1106,7 +1174,6 @@ plot.microNetProps <- function(x,
 
   #==========================================================================
   ### plot network(s)
-
 
   if(twoNets){
       par(mfrow = c(1,2))

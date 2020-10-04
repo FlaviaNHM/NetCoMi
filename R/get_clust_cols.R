@@ -1,8 +1,6 @@
 get_clust_cols <- function(clust1, clust2, adja1, adja2, kept1, kept2, isempty1,
                            isempty2, colorVec, sameClustCol, sameColThresh,
                            twoNets){
-
-
   if(twoNets){
     clust1 <- clust1[kept1]
     clust2 <- clust2[kept2]
@@ -78,6 +76,14 @@ get_clust_cols <- function(clust1, clust2, adja1, adja2, kept1, kept2, isempty1,
         for(c in cl2){
           clustcol2[clust2 == c] <- clustcols[i]
           i = i+1
+        }
+        
+        
+        if(!is.null(colorVec) && (i-1) > length(colorVec)){
+          
+          warning(i-1, " colors needed but 'colorVec' has only length ", 
+                  length(colorVec), ". Missing colors are filled up with colors from rainbow().")
+          
         }
 
         clustcol1[noclust1] <- "grey80"

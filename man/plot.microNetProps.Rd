@@ -178,12 +178,20 @@ Possible values are: \describe{
 \item{\code{"fix"}}{Default. All nodes have same size (hub size can be
 defined separately via \code{cexHubs}).}
 \item{\code{"degree"}, \code{"betweenness"}, \code{"closeness"},
-\code{"eigenvector"}}{Size scaled according to node's degree.}
+\code{"eigenvector"}}{Size scaled according to node's centrality.}
 \item{\code{"counts"}}{Size scaled according to the sum of counts (of
 microbes or samples, depending on what nodes express).}
 \item{\code{"normCounts"}}{Size scaled according to the sum of normalized
 counts (of microbes or samples), which are exported by
-\code{netConstruct}.}}}
+\code{netConstruct}.}
+\item{\code{"TSS", "fractions", "CSS", "COM", "rarefy", "VST", "clr", 
+"mclr"}}{Size scaled according to the sum of normalized
+counts. Available are the same options as for \code{normMethod} in
+\code{\link{netConstruct}}.}}}
+
+\item{normParam}{usage equal to argument \code{normParam} of 
+\code{\link{netConstruct}} if one of the normalization methods is used for
+node scaling (argument \code{nodeSize})}
 
 \item{nodeSizeSpread}{positive numeric value indicating the spread of node
 sizes. The smaller the value, the more similar are the node sizes. Node 
@@ -201,15 +209,31 @@ former two cases, the colors can be specified via \code{colorVec}. If
 defining a color, which is used for all nodes. If \code{NULL}, "grey40" is
 used for all nodes.}
 
-\item{colorVec}{a vector specifying the node colors. If \code{nodeColor}
-is set to \code{"colorVec"}, the vector defines a color for each node
-implying that its names must match the node's names (ensured if names match
-the colnames of the original count matrix).}
+\item{colorVec}{a vector or list with two vectors used to specify node colors. 
+Different usage depending on the "nodeColor" argument:
+\describe{
+\item{\code{nodeColor = "cluster"}}{\code{colorVec} must be a vector. 
+Depending on the \code{sameClustCol} argument, the colors are used only in 
+one or both networks. If the vector is not long enough, a warning is 
+returned and colors from \code{rainbow()} are used for the remaining 
+clusters.}
+\item{\code{nodeColor = "feature"}}{Defines a color for each level of 
+\code{featVecCol}. Can be a list with two vectors used for the two networks (for a single 
+network, only the first element is used) or a vector, which is used for 
+both groups if two networks are plotted.}
+\item{\code{nodeColor = "colorVec"}}{\code{colorVec} defines a color for 
+each node implying that its names must match the node's names (which is 
+also ensured if names match the colnames of the original count matrix). 
+Can be a list with two vectors used for the two networks (for a single 
+network, only the first element is used) or a vector, which is used for 
+both groups if two networks are plotted.}}}
 
 \item{featVecCol}{a vector with a feature for each node. Used for coloring
 nodes if \code{nodeColor} is set to \code{"feature"}. Is coerced to a
 factor. If \code{colorVec} is given, its length must be larger than or
 equal to the number of feature levels.}
+
+\item{sameFeatCol}{}
 
 \item{sameClustCol}{if TRUE (default) and two networks are plotted, clusters
 having at least \code{sameColThresh} nodes in common have the same color.

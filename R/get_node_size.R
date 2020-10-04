@@ -1,6 +1,6 @@
-get_node_size <- function(nodeSize, nodeSizeSpread, adja, countMat, normCounts,
-                        kept, cexNodes, cexHubs, hubs, highlightHubs,
-                        degree, between,  close, eigen){
+get_node_size <- function(nodeSize, normParam, nodeSizeSpread, adja, countMat, 
+                          normCounts, assoType, kept, cexNodes, cexHubs, hubs, 
+                          highlightHubs, degree, between,  close, eigen){
   
   getsize <- function(x, nodeSizeSpread, cexNodes){
     (x - min(x)) / (max(x) - min(x)) * nodeSizeSpread + cexNodes
@@ -36,8 +36,13 @@ get_node_size <- function(nodeSize, nodeSizeSpread, adja, countMat, normCounts,
     eigen <- abs(eigen[kept])
     nodeSize <- getsize(eigen, nodeSizeSpread, cexNodes)
 
-  } else if(nodeSize %in% c("counts")){
-    if(ncol(adja) == ncol(countMat)){
+  } else if(nodeSize == "counts"){
+    
+    if(is.null(countMat)){
+      stop("Count matrix must be available for node sizes based on counts.")
+    }
+    
+    if(assoType != "dissimilarity"){
       absfreq <- apply(countMat, 2, median)[kept]
     } else{
       absfreq <- apply(countMat, 1, median)[kept]
@@ -48,9 +53,9 @@ get_node_size <- function(nodeSize, nodeSizeSpread, adja, countMat, normCounts,
 
     nodeSize <- absfreq/max(absfreq) * nodeSizeSpread * cexNodes + 1
 
-  } else if(nodeSize %in% c("normCounts")){
+  } else if(nodeSize == "normCounts"){
 
-    if(ncol(adja) == ncol(countMat)){
+    if(assoType != "dissimilarity"){
       normfreq <- apply(normCounts, 2, median) + 0.01
     } else{
       normfreq <- apply(normCounts, 1, median) + 0.01
@@ -67,6 +72,30 @@ get_node_size <- function(nodeSize, nodeSizeSpread, adja, countMat, normCounts,
 
     normfreq <- normfreq[colnames(adja)]
     nodeSize <- normfreq/max(normfreq) * nodeSizeSpread * cexNodes + 1
+  } else if(nodeSize %in% c("TSS", "fractions", "CSS", "COM", "rarefy", "VST", 
+                            "clr", "mclr")){
+    if(is.null(countMat)){
+      stop("Count matrix must be available for node sizes based on normalized counts.")
+    }
+
+    if(nodeSize == "clr"){
+      countMat <- countMat + 1
+    }
+    attributes(countMat)$scale <- "counts"
+    normCounts <- norm_counts(countMat, normMethod = nodeSize, 
+                              normParam = normParam, zeroMethod = "none", 
+                              needfrac = FALSE, verbose = FALSE)
+      
+    if(assoType != "dissimilarity"){ 
+      normCounts_sum <- colSums(normCounts)[kept]
+      
+    } else{ # dissimilarity network
+      normCounts_sum <- rowSums(normCounts)[kept]
+      warning("Node sizes based on normalized counts not meaningful for dissimilarity networks.")
+    }
+    
+    nodeSize <- getsize(normCounts_sum, nodeSizeSpread, cexNodes)
+    
   }
 
   return(nodeSize)

@@ -143,7 +143,7 @@ function for details.}
 \item{normMethod}{character indicating the normalization method (in order to
 make counts of different samples comparable). Possible options are:
 \code{"none"} (default), \code{"TSS"} (or \code{"fractions"}), \code{"CSS"},
-\code{"COM"}, \code{"rarefy"}, \code{"VST"}, \code{"clr"}.
+\code{"COM"}, \code{"rarefy"}, \code{"VST"}, \code{"clr"}, and \code{mclr}.
 The corresponding parameters are set via \code{normPar}.}
 
 \item{normPar}{list with parameters passed to the function for normalization
@@ -308,99 +308,7 @@ Constructing microbial association networks and dissimilarity
   based networks (where nodes are subjects) from compositional count data.
 }
 \details{
-The function enables the construction of either a single network or
-  two networks that can be compared using the function
-  \code{\link{netCompare}}. Four types of association  measures are
-  available: correlation, conditional dependence, proportionality, and
-  dissimilarity.  Depending on the measure, nodes are either taxa or subjects
-  in the resulting network: In association-based networks (correlation,
-  partial correlation, conditional dependence, proportionality) nodes are
-  taxa, whereas in dissimilarity-based networks nodes are subjects.\cr\cr
-  In order to conduct a network comparison, two networks can be  constructed
-  by: \tabular{ll}{
-  (1)\tab passing a group vector to \code{group} (of length
-  \code{nrow(data)} for association networks and of length \code{ncol(data)}
-  for dissimilarity-based networks), or\cr
-  (2)\tab passing a second count matrix to \code{data2} (column names must
-  match for constructing association networks and row names must match for
-  dissimilarity-based networks), or \cr
-  (3)\tab passing a second association/dissimilarity matrix to \code{data2}.}
-  \cr
-  The object returned from \code{netConstruct} can either be passed to
-  \code{\link{netAnalyze}} for network analysis, or to
-  \code{\link{diffnet}} to construct a differential network from the
-  estimated associations.\cr\cr
-  \strong{Association measures:}
-  \tabular{ll}{
-  Argument \tab Function\cr
-  \code{"pearson"}\tab \code{\link[stats]{cor}} \cr
-  \code{"spearman"}\tab \code{\link[stats]{cor}} \cr
-  \code{"bicor"}\tab \code{\link[WGCNA]{bicor}} \cr
-  \code{"sparcc"}\tab \code{\link[NetCoMi]{sparcc_cpp}} \cr
-  \code{"cclasso"}\tab \code{\link[NetCoMi]{cclasso}} \cr
-  \code{"ccrepe"}\tab \code{\link[ccrepe]{ccrepe}} \cr
-  \code{"spieceasi"}\tab \code{\link[SpiecEasi]{spiec.easi}} \cr
-  \code{"spring"}\tab \code{\link[SPRING]{SPRING}} \cr
-  \code{"gcoda"}\tab \code{\link[NetCoMi]{gcoda}} \cr
-  \code{"propr"}\tab \code{\link[propr]{propr}}}
-  \cr
-  \strong{Dissimilarity measures:}
-  \tabular{lll}{
-  Argument \tab Function \tab Measure\cr
-  \code{"euclidean"} \tab \code{\link[vegan]{vegdist}} \tab
-  Euclidean distance \cr
-  \code{"bray"}\tab \code{\link[vegan]{vegdist}} \tab
-  Bray-Curtis  dissimilarity \cr
-  \code{"kld"}\tab \code{\link[LaplacesDemon]{KLD}} \tab
-  Kullback-Leibler divergence \cr
-  \code{"jeffrey"}\tab \code{\link[LaplacesDemon]{KLD}} \tab
-  Jeffrey divergence\cr
-  \code{"jsd"}\tab \code{\link[LaplacesDemon]{KLD}} \tab
-  Jensen-Shannon divergence \cr
-  \code{"ckld"}\tab \code{\link[base]{log}} \tab
-  Compositional Kullback-Leibler divergence \cr
-  \code{"aitchison"}\tab \code{\link[vegan]{vegdist}},
-  \code{\link[robCompositions]{cenLR}}\tab
-  Aitchison distance}
-  Definitions:\cr
-  \describe{
-  \item{Kullback-Leibler divergence:}{Since KLD is not symmetric,
-  0.5 * (KLD(p(x)||p(y)) + KLD(p(y)||p(x))) is returned.}
-  \item{Jeffrey divergence:}{Jeff = KLD(p(x)||p(y)) + KLD(p(y)||p(x))}
-  \item{Jensen-Shannon divergence:}{JSD = 0.5 KLD(P||M) + 0.5 KLD(Q||M),
-  where P=p(x), Q=p(y), and M=0.5(P+Q).}
-  \item{Compositional Kullback-Leibler divergence:}{cKLD(x,y) =
-  p/2 * log(A(x/y) * A(y/x)), where A(x/y) is the arithmetic mean of the
-  vector of ratios x/y.}
-  \item{Aitchison distance:}{Euclidean distance of the clr-transformed data.}
-  }\cr
-  \strong{Normalization methods:}
-  \tabular{lll}{
-  Argument \tab Method \tab Function\cr
-  \code{"TSS"} \tab Total sum scaling \tab t(apply(countMat, 1, function(x)
-  x/sum(x)))\cr
-  \code{"CSS"} \tab Cumulative sum scaling \tab
-  \code{\link[metagenomeSeq]{cumNormMat}}\cr
-  \code{"COM"} \tab Common sum scaling \tab
-  t(apply(countMat, 1, function(x) x * min(rowSums(countMat)) / sum(x)))\cr
-  \code{"rarefy"} \tab Rarefying \tab \code{\link[vegan:rarefy]{rrarefy}}\cr
-  \code{"VST"} \tab Variance stabilizing transformation\tab
-  \code{\link[DESeq2]{varianceStabilizingTransformation}}\cr
-  \code{"clr"} \tab Centered log-ratio transformation\tab
-  \code{\link[robCompositions]{cenLR}}
-  }
-  These methods (except rarefying) are described in
-  \cite{Badri et al.(2018)}.
-  \cr\cr
-  \strong{Transforming associations to dissimilarities:}
-  \tabular{ll}{
-  Argument \tab Function\cr
-  \code{"signed"} \tab sqrt(0.5 * (1 - x))\cr
-  \code{"unsigned"} \tab sqrt(1 - x^2)\cr
-  \code{"signedPos"} \tab  diss <- sqrt(0.5 * (1-x))\cr
-    \tab diss[x < 0] <- 0\cr
-  \code{"TOMdiss"} \tab \code{\link[WGCNA:TOMsimilarity]{TOMdist}}
-  }
+
 }
 \examples{
 # load data sets from American Gut Project (from SpiecEasi package)
