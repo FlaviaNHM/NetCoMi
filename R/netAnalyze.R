@@ -5,6 +5,34 @@
 #'
 #' @param net object of class \code{microNet} inheriting from a call to
 #'   \code{\link{netConstruct}}
+#' @param sPathAlgo character indicating the algorithm used for computing
+#'   the shortest paths between all node pairs. \code{\link[igraph]{distances}} 
+#'   is used for shortest path calculation. Possible values are: "unweighted", 
+#'   "dijkstra" (default), "bellman-ford", "johnson", or "automatic" (the 
+#'   fastest suitable algorithm is used). The shortest paths are needed for the 
+#'   average (shortest) path length and closeness centrality.
+#' @param sPathNorm logical. If \code{TRUE} (default), shortest paths are 
+#'   normalized by average dissimilarity (only connected nodes are considered). 
+#'   That means, a path is interpreted as steps with average dissimilarity. 
+#'   If \code{FALSE}, the shortest path is the minimum sum of dissimilarities 
+#'   between two nodes.
+#' @param sPathDisconnected character indicating how to handle disconnected 
+#'   components. A component (single node or subnetwork) is disconnected if 
+#'   there is no path between the component and all other nodes in the network.
+#'   Possible options are:
+#'   \describe{
+#'   \item{\code{"infinity"}}{Shortest paths between unconnected nodes are set
+#'   to infinity and thus ignored in average shortest path and closeness 
+#'   centrality calculation. As a consequence, a highly connected network may 
+#'   have a higher average path length than a network with fewer edges.}
+#'   \item{\code{"maxPath"}}{Default. The shortest path length (unnormalized) 
+#'   between unconnected components is set to the number of nodes (N) and 
+#'   thus longer than the maximum possible path length. In unweighted
+#'   networks, the maximum path length is N-1, and in weighted networks (N-1)*1, 
+#'   since the highest possible dissimilarity is one.}
+#'   }
+#' @param connectivity logical indicating whether edge and vertex connectivity 
+#'   should be calculated. Might be disabled to reduce execution time.
 #' @param clustMethod character indicating the clustering algorithm. Possible
 #'   values are "hierarchical" for a hierarchical algorithm based on
 #'   dissimilarity values, or the clustering methods provided by the igraph
@@ -26,8 +54,6 @@
 #'   quantile of the fitted log-normal distribution (if \code{lnormFit = TRUE})
 #'   or of the empirical distribution of centrality values (if
 #'   \code{lnormFit = FALSE}, which is default).
-#' @param connect logical indicating whether edge and vertex connectivity should
-#'   be calculated. Might be disabled to reduce execution time.
 #' @param weightDeg if \code{TRUE}, the weighted degree is used (see
 #'   \code{\link[igraph]{strength}}). Is automatically set to TRUE for a fully
 #'   connected network.
@@ -44,7 +70,6 @@
 #'   \code{\link[MASS]{fitdistr}}).\cr\cr If \code{clustPar} contains multiple
 #'   measures, the centrality values of a hub node must be above the given
 #'   quantile for all these measures.
-#'
 #' @return An object of class \code{microNetProps} containing the following
 #'   elements for both groups, respectively: \tabular{ll}{
 #'   \code{clustering}\tab determined clusters\cr
@@ -106,13 +131,16 @@
 #' @export
 
 netAnalyze <- function(net,
+                       sPathAlgo = "dijkstra",
+                       sPathNorm = TRUE,
+                       sPathDisconnected = "maxPath",
+                       connectivity = TRUE,
                        clustMethod = NULL,
                        clustPar = NULL,
                        clustPar2 = NULL,
                        hubPar = "eigenvector",
                        hubQuant = 0.95,
                        lnormFit = FALSE,
-                       connect = TRUE,
                        weightDeg = FALSE,
                        normDeg = TRUE,
                        normBetw = TRUE,
@@ -135,6 +163,10 @@ netAnalyze <- function(net,
 
   hubPar <- match.arg(hubPar, c("degree", "betweenness", "closeness",
                                 "eigenvector"), several.ok = TRUE)
+  
+  sPathAlgo <- match.arg(sPathAlgo, c("automatic", "unweighted",
+                                                    "dijkstra", "bellman-ford", 
+                                                    "johnson"))
 
   if(!is.null(clustPar)) stopifnot(is.list(clustPar))
   stopifnot(is.logical(lnormFit))
@@ -183,26 +215,33 @@ netAnalyze <- function(net,
     }
   }
 
-
-  props1 <- calc_props(adjaMat = adja1, dissMat = x$dissMat1,
-                      weighted = x$parameters$weighted, isempty = isempty1,
-                      clustMethod = clustMethod, clustPar = clustPar,
-                      hubPar = hubPar, hubQuant = hubQuant, connect = connect,
-                      lnormFit = lnormFit, weightDeg = weightDeg,
-                      normDeg = normDeg, normBetw = normBetw,
-                      normClose = normClose, normEigen = normEigen)
+  props1 <- calc_props(adjaMat = adja1, dissMat = x$dissMat1, 
+                       assoMat = x$assoMat1, 
+                       sPathDisconnected = sPathDisconnected, 
+                       sPathNorm = sPathNorm, sPathAlgo = sPathAlgo,
+                       weighted = x$parameters$weighted, 
+                       isempty = isempty1, clustMethod = clustMethod, 
+                       clustPar = clustPar, hubPar = hubPar, 
+                       hubQuant = hubQuant, connectivity = connectivity,
+                       lnormFit = lnormFit, weightDeg = weightDeg,
+                       normDeg = normDeg, normBetw = normBetw,
+                       normClose = normClose, normEigen = normEigen)
   props2 <- NULL
 
   if(twoNets){
     props2 <- calc_props(adjaMat = adja2, dissMat = x$dissMat2,
-                        weighted = x$parameters$weighted, isempty = isempty2,
-                        clustMethod = clustMethod, clustPar = clustPar2,
-                        hubPar = hubPar, hubQuant = hubQuant, connect = connect,
-                        lnormFit = lnormFit, weightDeg = weightDeg,
-                        normDeg = normDeg, normBetw = normBetw,
-                        normClose = normClose, normEigen = normEigen)
+                         sPathDisconnected = sPathDisconnected, 
+                         sPathNorm = sPathNorm,
+                         assoMat = x$assoMat2, weighted = x$parameters$weighted, 
+                         isempty = isempty2, clustMethod = clustMethod, 
+                         clustPar = clustPar2, hubPar = hubPar, 
+                         hubQuant = hubQuant, connectivity = connectivity,
+                         lnormFit = lnormFit, weightDeg = weightDeg,
+                         normDeg = normDeg, normBetw = normBetw,
+                         normClose = normClose, normEigen = normEigen,
+                         sPathAlgo = sPathAlgo)
   }
-  
+
   output <- list(clustering = list(clust1 = props1$clust,
                                    clust2 = props2$clust,
                                    tree1 = props1$tree,
@@ -216,7 +255,9 @@ netAnalyze <- function(net,
                                      eigenv1 = props1$eigen,
                                      eigenv2 = props2$eigen),
                  hubs = list(hubs1 = props1$hubs, hubs2 = props2$hubs),
-                 globalProps = list(avPath1 = props1$avPath,
+                 globalProps = list(avDiss1 = props1$avDiss,
+                                    avDiss2 = props2$avDiss,
+                                    avPath1 = props1$avPath,
                                     avPath2 = props2$avPath,
                                     clustCoef1 = props1$clustCoef,
                                     clustCoef2 = props2$clustCoef,
@@ -227,14 +268,37 @@ netAnalyze <- function(net,
                                     edgeConnect1 = props1$edgeconnect,
                                     edgeConnect2 = props2$edgeconnect,
                                     density1 = props1$density,
-                                    density2 = props2$density),
-                 paramsProperties = list(clustMethod = clustMethod,
+                                    density2 = props2$density,
+                                    pnRatio1 = props1$pnRatio,
+                                    pnRatio2 = props2$pnRatio),
+                 globalPropsLC = list(lcSize1 = props1$lcSize, 
+                                      lcSize2 = props2$lcSize,
+                                      avDiss1 = props1$avDiss_lc,
+                                      avDiss2 = props2$avDiss_lc,
+                                      avPath1 = props1$avPath_lc,
+                                      avPath2 = props2$avPath_lc,
+                                      clustCoef1 = props1$clustCoef_lc,
+                                      clustCoef2 = props2$clustCoef_lc,
+                                      modularity1 = props1$modul_lc,
+                                      modularity2 = props2$modul_lc,
+                                      vertConnect1 = props1$vertconnect_lc,
+                                      vertConnect2 = props2$vertconnect_lc,
+                                      edgeConnect1 = props1$edgeconnect_lc,
+                                      edgeConnect2 = props2$edgeconnect_lc,
+                                      density1 = props1$density_lc,
+                                      density2 = props2$density_lc,
+                                      pnRatio1 = props1$pnRatio_lc,
+                                      pnRatio2 = props2$pnRatio_lc),
+                 paramsProperties = list(sPathDisconnected = sPathDisconnected,
+                                         sPathNorm = sPathNorm,
+                                         sPathAlgo = sPathAlgo,
+                                         connectivity = connectivity,
+                                         clustMethod = clustMethod,
                                          clustPar = clustPar,
                                          clustPar2 = clustPar2,
                                          hubPar = hubPar,
                                          hubQuant = hubQuant,
                                          lnormFit = lnormFit,
-                                         connect = connect,
                                          weightDeg = weightDeg,
                                          normDeg = normDeg,
                                          normBetw = normBetw,
@@ -263,13 +327,16 @@ netAnalyze <- function(net,
                               matchDesign = x$matchDesign,
                               assoType = x$assoType,
                               softThreshPower = x$softThreshPower,
-                              sampleSize = x$sampleSize),
+                              sampleSize = x$sampleSize,
+                              weighted = x$parameters$weighted),
                  paramsNetConstruct = x$parameters,
                  isempty = list(isempty1 = isempty1, isempty2 = isempty2))
 
   class(output) <- "microNetProps"
   return(output)
 }
+
+
 
 
 

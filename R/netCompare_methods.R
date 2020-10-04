@@ -9,6 +9,8 @@
 #'   from \code{object}
 #' @param pAdjust logical. If \code{TRUE} the permutation p-values adjusted for
 #'   multiple testing are shown.
+#' @param showLargestComp logical. If \code{TRUE} (default), global properties
+#'   are also shown for the largest connected component of the network.
 #' @param showCentr character vector indicating for which centrality measures
 #'   the results (values for both groups, difference and p-values resulting from
 #'   permutation tests) shall be printed. Possible values are "all", "degree",
@@ -28,7 +30,8 @@
 #' @rdname summarize.microNetComp
 #' @export
 summary.microNetComp <- function(object, groupNames = NULL, pAdjust = TRUE,
-                                 showCentr = "all", numbNodes = 10L, digits = 3L, 
+                                 showLargestComp = TRUE, showCentr = "all", 
+                                 numbNodes = 10L, digits = 3L, 
                                  digitsPval = 6L, ...){
 
   showCentr <- match.arg(showCentr, choices = c("all", "none", "degree", "betweenness",
@@ -40,7 +43,7 @@ summary.microNetComp <- function(object, groupNames = NULL, pAdjust = TRUE,
   digitsPval <- as.integer(digitsPval)
 
   stopifnot(numbNodes >= 1)
-  numbNodes <- min(as.integer(numbNodes), length(object$diffs$diffDeg))
+  numbNodes <- min(as.integer(numbNodes), length(object$diffCentr$diffDeg))
 
 
   if(is.null(groupNames)){
@@ -52,16 +55,8 @@ summary.microNetComp <- function(object, groupNames = NULL, pAdjust = TRUE,
     group2 <- groupNames[2]
   }
 
-
-  names <- c("degree", "betweenness centr.", "closeness centr.", 
+  namesCentr <- c("degree", "betweenness centr.", "closeness centr.", 
              "eigenvec. centr.", "hub taxa")
-
-  if(is.na(object$properties$vertConnect1)){
-    names2 <- c("avPath", "clustCoef", "modul", "density")
-  } else{
-    names2 <- c("avPath", "clustCoef", "modul", "vertConnect", 
-                "edgeConnect", "density")
-  }
 
   # jaccard index
   jacc <- numeric(5)
@@ -90,7 +85,7 @@ summary.microNetComp <- function(object, groupNames = NULL, pAdjust = TRUE,
     sig.less[i] <- codesig(p.less[i])
   }
   jaccmat <- data.frame(jacc, p.less, sig.less, p.greater, sig.greater)
-  rownames(jaccmat) <- names
+  rownames(jaccmat) <- namesCentr
   colnames(jaccmat) <- c("Jacc", "  P(<=Jacc)", "   ", "P(>=Jacc)", "  ")
 
   #============================================================
@@ -103,51 +98,81 @@ summary.microNetComp <- function(object, groupNames = NULL, pAdjust = TRUE,
   #============================================================
   # global network properties
 
+  namesGlob1 <- c("avDiss", "avPath", "density", "vertConnect", "edgeConnect", 
+              "pnRatio", "clustCoef", "modul")
+  
+  namesGlob2 <- c("Diss", "Path", "Density", "VertConnect", "EdgeConnect", 
+              "pnRatio", "ClustCoef", "Modul")
+  
+  avPathname <- ifelse(object$sPathNorm, 
+                       "average (shortest) path length**",
+                       "average (shortest) path length")
+  
+  namesPrint <- c("average dissimilarity*",
+                 avPathname,
+                 "edge density",
+                 "vertex connectivity",
+                 "edge connectivity",
+                 "positive-to-negative ratio",
+                 "clustering coefficient",
+                 "modularity")
+  
   if(is.na(object$properties$vertConnect1)){
-    globProps <- c("average path length",
-                   "clustering coeff.",
-                   "modularity",
-                   "edge density")
-  } else{
-    globProps <- c("average path length",
-                   "clustering coeff.",
-                   "modularity",
-                   "vertex connectivity",
-                   "edge connectivity",
-                   "edge density")
+    namesGlob1 <- namesGlob1[-c(4,5)]
+    namesDiff <- namesDiff[-c(4,5)]
+    namesPrint <- namesPrint[-c(4,5)]
   }
-
-  if(length(object$avPath) == 2){
-    propdiffs <- as.data.frame(matrix(0, nrow = length(globProps), ncol = 5,
-                                      dimnames = list(globProps,
+  
+  if(showLargestComp){
+    namesGlob1_lc <- c("lcSize", namesGlob1)
+    namesGlob2_lc <- c("lcSize", namesGlob2)
+    namesPrint_lc <- c("lcSize", namesPrint)
+  }
+  
+  if(is.null(object$pvalDiffGlobal)){ 
+    propdiffs <- as.data.frame(matrix(0, nrow = length(namesPrint), ncol = 3,
+                                      dimnames = list(namesPrint,
+                                                      c(group1, paste0("  ",
+                                                                       group2),
+                                                        "   difference"))))
+  } else{
+    propdiffs <- as.data.frame(matrix(0, nrow = length(namesPrint), ncol = 5,
+                                      dimnames = list(namesPrint,
                                                       c(group1, paste0("  ",
                                                                        group2),
                                                         "   abs. diff.",
                                                         "    p-value", " "))))
-
-    for(i in 1:length(globProps)){
-      propdiffs[i,1] <- round(as.numeric(object$properties[paste0(names2[i],1)]), 
-                              digits)
-      propdiffs[i,2] <- round(as.numeric(object$properties[paste0(names2[i],2)]), 
-                              digits)
-      propdiffs[i,3] <- round(object[[names2[i]]][1], digits)
-      propdiffs[i,4] <- round(object[[names2[i]]][2], digitsPval)
-      propdiffs[i,5] <- codesig(object[[names2[i]]][2])
+  }
+  
+  for(i in 1:length(namesPrint)){
+    propdiffs[i,1] <- round(as.numeric(object$properties[paste0(namesGlob1[i],1)]), 
+                            digits)
+    propdiffs[i,2] <- round(as.numeric(object$properties[paste0(namesGlob1[i],2)]), 
+                            digits)
+    propdiffs[i,3] <- round(object$diffGlobal[[paste0("diff", namesGlob2[i])]], digits)
+    if(!is.null(object$pvalDiffGlobal)){
+      propdiffs[i,4] <- round(object$pvalDiffGlobal[[paste0("pval", namesGlob2[i])]], digitsPval)
+      propdiffs[i,5] <- codesig(object$pvalDiffGlobal[[paste0("pval", namesGlob2[i])]])
     }
-
+  }
+  
+  if(showLargestComp){
+    propdiffs_lc <- rbind("component size" = rep(0, ncol(propdiffs)), propdiffs)
+    
+    # largest component
+    for(i in 1:length(namesPrint_lc)){
+      propdiffs_lc[i,1] <- round(as.numeric(object$propertiesLC[paste0(namesGlob1_lc[i],1)]), 
+                                 digits)
+      propdiffs_lc[i,2] <- round(as.numeric(object$propertiesLC[paste0(namesGlob1_lc[i],2)]), 
+                                 digits)
+      propdiffs_lc[i,3] <- round(object$diffGlobalLC[[paste0("diff", namesGlob2_lc[i])]], digits)
+      if(!is.null(object$pvalDiffGlobal)){
+        propdiffs_lc[i,4] <- round(object$pvalDiffGlobalLC[[paste0("pval", namesGlob2_lc[i])]], digitsPval)
+        propdiffs_lc[i,5] <- codesig(object$pvalDiffGlobalLC[[paste0("pval", namesGlob2_lc[i])]])
+      }
+    }
   } else{
-    propdiffs <- as.data.frame(matrix(0, nrow = length(globProps), ncol = 3,
-                                      dimnames = list(globProps,
-                                                      c(group1, paste0("  ",
-                                                                       group2),
-                                                        "   difference"))))
-    for(i in 1:length(globProps)){
-      propdiffs[i,1] <- round(as.numeric(object$properties[paste0(names2[i],1)]), 
-                              digits)
-      propdiffs[i,2] <- round(as.numeric(object$properties[paste0(names2[i],2)]), 
-                              digits)
-      propdiffs[i,3] <- round(object[[i+5]][1], digits)
-    }
+    propdiffs_lc <- NULL
   }
 
   #============================================================
@@ -155,16 +180,14 @@ summary.microNetComp <- function(object, groupNames = NULL, pAdjust = TRUE,
 
   topProps <- NULL
   if(showCentr[1] != "none"){
-    l <- length(object$diffs$diffDeg)
-
-    topDegNames <- names(sort(abs(object$diffs$diffDeg), 
-                              decreasing = TRUE))[1:min(numbNodes, l)]
-    topBetwNames <- names(sort(abs(object$diffs$diffBetw), 
-                               decreasing = TRUE))[1:min(numbNodes, l)]
-    topCloseNames <- names(sort(abs(object$diffs$diffClose), 
-                                decreasing = TRUE))[1:min(numbNodes, l)]
-    topEigenNames <- names(sort(abs(object$diffs$diffEigen), 
-                                decreasing = TRUE))[1:min(numbNodes, l)]
+    topDegNames <- names(sort(abs(object$diffCentr$diffDeg), 
+                              decreasing = TRUE))[1:numbNodes]
+    topBetwNames <- names(sort(abs(object$diffCentr$diffBetw), 
+                               decreasing = TRUE))[1:numbNodes]
+    topCloseNames <- names(sort(abs(object$diffCentr$diffClose), 
+                                decreasing = TRUE))[1:numbNodes]
+    topEigenNames <- names(sort(abs(object$diffCentr$diffEigen), 
+                                decreasing = TRUE))[1:numbNodes]
 
     cols <- ifelse(is.null(object$pvalDiffCentr), 3, 5)
     if(cols == 3){
@@ -184,7 +207,7 @@ summary.microNetComp <- function(object, groupNames = NULL, pAdjust = TRUE,
                                      dimnames = list(topDegNames, cnames)))
       topDeg[,1] <- round(object$properties$deg1[topDegNames], digits)
       topDeg[,2] <- round(object$properties$deg2[topDegNames], digits)
-      topDeg[,3] <- round(abs(object$diffs$diffDeg[topDegNames]), digits)
+      topDeg[,3] <- round(abs(object$diffCentr$diffDeg[topDegNames]), digits)
       if(cols == 5){
         if(pAdjust){
           topDeg[,4] <- round(object$pvalDiffCentrAdjust$pAdjustDiffDeg[topDegNames],
@@ -206,7 +229,7 @@ summary.microNetComp <- function(object, groupNames = NULL, pAdjust = TRUE,
                                       dimnames = list(topBetwNames, cnames)))
       topBetw[,1] <- round(object$properties$betw1[topBetwNames], digits)
       topBetw[,2] <- round(object$properties$betw2[topBetwNames], digits)
-      topBetw[,3] <- round(abs(object$diffs$diffBetw[topBetwNames]), digits)
+      topBetw[,3] <- round(abs(object$diffCentr$diffBetw[topBetwNames]), digits)
       if(cols == 5){
         if(pAdjust){
           topBetw[,4] <- round(object$pvalDiffCentrAdjust$pAdjustDiffBetw[topBetwNames],
@@ -227,7 +250,7 @@ summary.microNetComp <- function(object, groupNames = NULL, pAdjust = TRUE,
                                        dimnames = list(topCloseNames, cnames)))
       topClose[,1] <- round(object$properties$close1[topCloseNames], digits)
       topClose[,2] <- round(object$properties$close2[topCloseNames], digits)
-      topClose[,3] <- round(abs(object$diffs$diffClose[topCloseNames]), digits)
+      topClose[,3] <- round(abs(object$diffCentr$diffClose[topCloseNames]), digits)
       if(cols == 5){
         if(pAdjust){
           topClose[,4] <- round(object$pvalDiffCentrAdjust$pAdjustDiffClose[topCloseNames],
@@ -248,7 +271,7 @@ summary.microNetComp <- function(object, groupNames = NULL, pAdjust = TRUE,
                                        dimnames = list(topEigenNames, cnames)))
       topEigen[,1] <- round(object$properties$eigen1[topEigenNames], digits)
       topEigen[,2] <- round(object$properties$eigen2[topEigenNames], digits)
-      topEigen[,3] <- round(abs(object$diffs$diffEigen[topEigenNames]), digits)
+      topEigen[,3] <- round(abs(object$diffCentr$diffEigen[topEigenNames]), digits)
       if(cols == 5){
         if(pAdjust){
           topEigen[,4] <- round(object$pvalDiffCentrAdjust$pAdjustDiffEigen[topEigenNames],
@@ -267,9 +290,11 @@ summary.microNetComp <- function(object, groupNames = NULL, pAdjust = TRUE,
                      topEigen = topEigen)
   }
 
-  structure(list(jaccmat = jaccmat, propdiffs = propdiffs, rand = rand,
+  structure(list(jaccmat = jaccmat, propdiffs = propdiffs, 
+                 propdiffs_lc = propdiffs_lc, rand = rand, 
                  properties = object$properties, topProps = topProps,
-                 pvalDiffCentr = object$pvalDiffCentr, call = object$call),
+                 pvalDiffCentr = object$pvalDiffCentr,
+                 sPathNorm = object$sPathNorm, call = object$call),
             class = "summary.microNetComp")
 }
 
@@ -293,22 +318,34 @@ print.summary.microNetComp <- function(x, ...){
   cat("\n\nCALL: \n")
   dput(x$call, control = NULL)
 
-  cat("\n\nJaccard index (similarity betw. sets of most central nodes):\n")
+  cat("\n\nGlobal network properties\n")
+  cat("`````````````````````````\n")
+  if(!is.null(x$propdiffs_lc)) cat("Whole network:\n")
+  print(x$propdiffs)
+  
+  if(!is.null(x$propdiffs_lc)){
+    cat("\nLargest component:\n")
+    print(x$propdiffs_lc)
+  }
+  
+  cat("-----\n")
+  if(ncol(x$propdiffs) == 5){
+    cat("p-values: one-tailed test with null hypothesis diff=0")
+  }
+  if(x$sPathNorm){
+    cat("\n *: Dissimilarity = 1 - edge weight")
+    cat("\n**: Path length: Steps with average dissimilarity")
+  } else{
+    cat("\n*: Dissimilarity = 1 - edge weight")
+  }
+  
+  cat("\n\nJaccard index (similarity betw. sets of most central nodes)\n")
   cat("`````````````\n")
   print(x$jaccmat)
   cat("-----\n")
   cat("Jaccard index ranges from 0 (compl. different) to 1 (sets equal)\n")
 
-  cat("\n\nGlobal network properties:\n")
-  cat("``````````````````````````\n")
-  print(x$propdiffs)
-
-  if(ncol(x$propdiffs) == 5){
-    cat("-----\n")
-    cat("p-values: one-tailed test with null hypothesis diff=0\n")
-  }
-
-  cat("\n\nAdjusted Rand index (similarity betw. clusterings):\n")
+  cat("\n\nAdjusted Rand index (similarity betw. clusterings)\n")
   cat("```````````````````\n")
   print(x$rand)
   cat("-----\n")
@@ -318,7 +355,7 @@ print.summary.microNetComp <- function(x, ...){
 
 
   if(!is.null(x$topProps)){
-    cat("\n\nCentrality measures (sorted by decreasing difference):\n")
+    cat("\n\nCentrality measures (sorted by decreasing difference)\n")
     cat("````````````````````")
 
     if(!is.null(x$topProps$topDeg)){

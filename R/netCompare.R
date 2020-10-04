@@ -236,12 +236,12 @@ netCompare <- function(x,
   if(!is.null(logFile)) stopifnot(is.character(logFile))
   if(!is.null(assoPerm)) stopifnot(is.list(assoPerm) & length(assoPerm) == 2)
 
-  weighted <- clustMethod <- clustPar <- hubPar <- hubQuant <- weightDeg <- NULL
-  normDeg <- normBetw <- normClose <- normEigen <- NULL
-  softThreshPower <- softThreshCut <- softThreshType <- NULL
-  kNeighbor <- knnMutual <- NULL
-  measure <- measurePar <- scaleDiss <- sparsMethod <- thresh <- alpha <- NULL
-  lfdrThresh <- nboot <-  dissFunc <- dissFuncPar <- simFunc <- simFuncPar <- NULL
+  #weighted <- clustMethod <- clustPar <- hubPar <- hubQuant <- weightDeg <- NULL
+  #normDeg <- normBetw <- normClose <- normEigen <- NULL
+  #softThreshPower <- softThreshCut <- softThreshType <- NULL
+  #kNeighbor <- knnMutual <- NULL
+  #measure <- measurePar <- scaleDiss <- sparsMethod <- thresh <- alpha <- NULL
+  #lfdrThresh <- nboot <-  dissFunc <- dissFuncPar <- simFunc <- simFuncPar <- NULL
 
   for(i in 1:length(x$paramsProperties)){
     assign(names(x$paramsProperties)[i], x$paramsProperties[[i]])
@@ -303,15 +303,18 @@ netCompare <- function(x,
                                  appendLF = FALSE)
 
   props <- calc_diff_props(adja1 = adja1, adja2 = adja2,
-                         dissMat1 = dissMat1, dissMat2 = dissMat2,
-                         weighted = weighted,
-                         clustMethod = clustMethod, clustPar = clustPar,
-                         hubPar = hubPar,  hubQuant = hubQuant,
-                         jaccQuant = jaccQuant, lnormFit = lnormFit,
-                         connect = connect, weightDeg = weightDeg,
-                         normDeg = normDeg,  normBetw = normBetw,
-                         normClose = normClose, normEigen = normEigen,
-                         nPermRand = nPermRand)
+                           dissMat1 = dissMat1, dissMat2 = dissMat2,
+                           assoMat1 = assoMat1, assoMat2 = assoMat2,
+                           sPathDisconnected = sPathDisconnected,
+                           sPathNorm = sPathNorm, sPathAlgo = sPathAlgo,
+                           weighted = weighted, clustMethod = clustMethod, 
+                           clustPar = clustPar, clustPar2 = clustPar2,
+                           hubPar = hubPar,  hubQuant = hubQuant,
+                           jaccQuant = jaccQuant, lnormFit = lnormFit,
+                           connectivity = connectivity, weightDeg = weightDeg,
+                           normDeg = normDeg,  normBetw = normBetw,
+                           normClose = normClose, normEigen = normEigen,
+                           nPermRand = nPermRand)
   if(permTest & verbose) message("Done.")
 
 
@@ -608,14 +611,21 @@ netCompare <- function(x,
                                                        adja2 = adja2.tmp,
                                                        dissMat1 = dissMat1.tmp,
                                                        dissMat2 = dissMat2.tmp,
+                                                       assoMat1 = assoMat1.tmp,
+                                                       assoMat2 = assoMat2.tmp,
+                                                       sPathDisconnected = 
+                                                         sPathDisconnected,
+                                                       sPathNorm = sPathNorm,
+                                                       sPathAlgo = sPathAlgo,
                                                        weighted = weighted,
                                                        clustMethod = clustMethod,
                                                        clustPar = clustPar,
+                                                       clustPar2 = clustPar2,
                                                        hubPar = hubPar,
                                                        hubQuant = hubQuant,
                                                        jaccQuant = jaccQuant,
                                                        lnormFit = lnormFit,
-                                                       connect = connect,
+                                                       connectivity = connectivity,
                                                        weightDeg = weightDeg,
                                                        normDeg = normDeg,
                                                        normBetw = normBetw,
@@ -625,13 +635,21 @@ netCompare <- function(x,
                                                        testJacc = FALSE,
                                                        testRand = FALSE)
 
-                           out <- list()
-                           for(i in c("diffPath", "diffClust",
-                                      "diffModul", "diffVertConnect",
-                                      "diffEdgeConnect",
-                                      "diffDensity", "absDiffs")){
-                             out[[i]] <- prop.tmp[[i]]
+                           out <- list(diffsGlobal = NULL,
+                                       diffsGlobalLC = NULL,
+                                       absDiffCentr = NULL)
+                           
+                           for(i in c("diffDiss", "diffPath", "diffDensity",
+                                      "diffVertConnect", "diffEdgeConnect",
+                                      "diffpnRatio", "diffClustCoef", "diffModul")){
+                             out$diffsGlobal[[i]] <- prop.tmp$diffsGlobal[[i]]
+                             out$diffsGlobalLC[[i]] <- prop.tmp$diffsGlobalLC[[i]]
                            }
+                           
+                           out$diffsGlobalLC[["difflcSize"]] <- 
+                             prop.tmp$diffsGlobalLC$difflcSize
+
+                           out$absDiffsCentr <- prop.tmp$absDiffsCentr
 
                            if(storeAssoPerm){
                              if(distNet){
@@ -660,14 +678,25 @@ netCompare <- function(x,
       message("Done.")
       message("Calculating p-values ... ", appendLF = FALSE)
     }
+    
+    results_global <- matrix(0, nrow = nPerm, ncol = 8)
+    results_global_lc <- matrix(0, nrow = nPerm, ncol = 9)
+    selnames <- c("diffDiss", "diffPath", "diffDensity", "diffVertConnect",
+                  "diffEdgeConnect", "diffpnRatio", "diffClustCoef", "diffModul")
 
-    results <- matrix(0, nrow = nPerm, ncol = 6)
-    selnames <- c("diffPath", "diffClust", "diffModul", "diffVertConnect",
-                  "diffEdgeConnect", "diffDensity")
-
-    for(i in 1:6){
-      for(b in 1:nPerm){
-        results[b,i] <- as.numeric(propsPerm[[b]][selnames[i]])
+    colnames(results_global) <- selnames
+    colnames(results_global_lc) <- c(selnames, "difflcSize")
+    
+    for(i in 1:9){
+      if(i == 9){
+        for(b in 1:nPerm){
+          results_global_lc[b,i] <- as.numeric(propsPerm[[b]]$diffsGlobalLC["difflcSize"])
+        }
+      } else{
+        for(b in 1:nPerm){
+          results_global[b,i] <- as.numeric(propsPerm[[b]]$diffsGlobal[selnames[i]])
+          results_global_lc[b,i] <- as.numeric(propsPerm[[b]]$diffsGlobalLC[selnames[i]])
+        }
       }
     }
 
@@ -718,13 +747,19 @@ netCompare <- function(x,
       countsPerm2 <- NULL
     }
 
-    pvalPath <- (sum(results[,1] >= props$diffPath) + 1) / (nPerm + 1)
-    pvalClust <- (sum(results[,2] >= props$diffClust) + 1) / (nPerm + 1)
-    pvalModul <- (sum(results[,3] >= props$diffModul) + 1) / (nPerm + 1)
-    pvalVertConnect <- (sum(results[,4] >= props$diffVertConnect) + 1) / (nPerm + 1)
-    pvalEdgeConnect <- (sum(results[,5] >= props$diffEdgeConnect) + 1) / (nPerm + 1)
-    pvalDensity <- (sum(results[,6] >= props$diffDensity) + 1) / (nPerm + 1)
-
+    pvalnames <- c("pvalDiss", "pvalPath", "pvalDensity", "pvalVertConnect", 
+                   "pvalEdgeConnect", "pvalpnRatio", "pvalClustCoef", "pvalModul")
+    
+    for(i in 1:ncol(results_global)){
+      assign(pvalnames[i], (sum(results_global[, i] >= 
+                                  props$diffsGlobal[[i]]) + 1) / (nPerm + 1))
+      assign(paste0(pvalnames[i], "_lc"), (sum(results_global_lc[, i] >= 
+                                                 props$diffsGlobalLC[[i]]) + 1) / (nPerm + 1))
+    }
+    
+    pvallcSize <- (sum(results_global_lc[, "difflcSize"] >= 
+                         props$diffsGlobalLC[["difflcSize"]]) + 1) / (nPerm + 1)
+    
 
     pvalDiffDeg <- sapply(1:ncol(adja1), function(i){
       (sum(absDiffsPermDeg[, i] >= props$absDiffs$absDiffDeg[i]) + 1) / (nPerm + 1)
@@ -771,18 +806,27 @@ netCompare <- function(x,
                    jaccClose = props$jaccClose,
                    jaccEigen = props$jaccEigen,
                    jaccHub = props$jaccHub,
-                   avPath = c(diff = props$diffPath, pval = pvalPath),
-                   clustCoef = c(diff = props$diffClust, pval = pvalClust),
-                   modul = c(diff = props$diffModul, pval = pvalModul),
-                   vertConnect = c(diff = props$diffVertConnect,
-                                   pval = pvalVertConnect),
-                   edgeConnect = c(diff = props$diffEdgeConnect,
-                                   pval = pvalEdgeConnect),
-                   density = c(diff = props$diffDensity,
-                               pval = pvalDensity),
                    randInd = props$randInd,
-                   properties = props$props,
-                   diffs = props$diffs,
+                   diffGlobal = props$diffsGlobal,
+                   pvalDiffGlobal = list(pvalDiss = pvalDiss, 
+                                         pvalPath = pvalPath,
+                                         pvalDensity = pvalDensity,
+                                         pvalEdgeConnect = pvalEdgeConnect,
+                                         pvalVertConnect = pvalVertConnect,
+                                         pvalpnRatio = pvalpnRatio,
+                                         pvalClustCoef = pvalClustCoef,
+                                         pvalModul = pvalModul),
+                   diffGlobalLC = props$diffsGlobalLC,
+                   pvalDiffGlobalLC = list(pvallcSize = pvallcSize,
+                                           pvalDiss = pvalDiss_lc, 
+                                           pvalPath = pvalPath_lc,
+                                           pvalDensity = pvalDensity_lc,
+                                           pvalEdgeConnect = pvalEdgeConnect_lc,
+                                           pvalVertConnect = pvalVertConnect_lc,
+                                           pvalpnRatio = pvalpnRatio_lc,
+                                           pvalClustCoef = pvalClustCoef_lc,
+                                           pvalModul = pvalModul_lc),
+                   diffCentr = props$diffsCentr,
                    pvalDiffCentr = list(pvalDiffDeg = pvalDiffDeg,
                                     pvalDiffBetw = pvalDiffBetw,
                                     pvalDiffClose = pvalDiffClose,
@@ -791,6 +835,8 @@ netCompare <- function(x,
                                           pAdjustDiffBetw = pAdjustDiffBetw,
                                           pAdjustDiffClose = pAdjustDiffClose,
                                           pAdjustDiffEigen = pAdjustDiffEigen),
+                   properties = props$props,
+                   propertiesLC = props$propsLC,
                    countMatrices = list(count1 = count1,
                                         count2 = count2),
                    assoMatrices = list(assoMat1 = assoMat1,
@@ -806,6 +852,7 @@ netCompare <- function(x,
                    countsPerm = list(countsPerm1 = countsPerm1, 
                                      countsPerm2 = countsPerm2),
                    groups = list(group1 = xgroups[1], group2 = xgroups[2]),
+                   sPathNorm = sPathNorm,
                    call = match.call())
   } else{
     output <- list(jaccDeg = props$jaccDeg,
@@ -813,15 +860,12 @@ netCompare <- function(x,
                    jaccClose = props$jaccClose,
                    jaccEigen = props$jaccEigen,
                    jaccHub = props$jaccHub,
-                   diffPath = props$diffPath,
-                   diffClust = props$diffClust,
-                   diffModul = props$diffModul,
-                   diffVertConnect = props$diffVertConnect,
-                   diffEdgeConnect = props$diffEdgeConnect,
-                   diffDensity = props$diffDensity,
                    randInd = props$randInd,
+                   diffGlobal = props$diffsGlobal,
+                   diffGlobalLC = props$diffsGlobalLC,
+                   diffCentr = props$diffsCentr,
                    properties = props$props,
-                   diffs = props$diffs,
+                   propertiesLC = props$propsLC,
                    countMatrices = list(count1 = count1,
                                         count2 = count2),
                    assoMatrices = list(assoMat1 = assoMat1,
@@ -832,6 +876,7 @@ netCompare <- function(x,
                                        adja2 = adja2),
                    groups = list(group1 = xgroups[1],
                                  group2 = xgroups[2]),
+                   sPathNorm = sPathNorm,
                    call = match.call())
   }
   class(output) <- "microNetComp"

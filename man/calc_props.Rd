@@ -7,6 +7,10 @@
 calc_props(
   adjaMat,
   dissMat,
+  assoMat,
+  sPathDisconnected,
+  sPathNorm,
+  sPathAlgo,
   weighted,
   isempty,
   clustMethod,
@@ -14,7 +18,7 @@ calc_props(
   hubPar,
   hubQuant,
   lnormFit,
-  connect,
+  connectivity,
   weightDeg,
   normDeg,
   normBetw,
@@ -28,6 +32,16 @@ calc_props(
 \item{adjaMat}{adjacency matrix}
 
 \item{dissMat}{dissimilarity matrix}
+
+\item{assoMat}{association matrix}
+
+\item{sPathDisconnected}{indicates how to handle disconnected components}
+
+\item{sPathNorm}{logical. If TRUE, shortest paths are normalized by 
+average dissimilarity.}
+
+\item{sPathAlgo}{character indicating the algorithm used for shortest path
+calculation.}
 
 \item{weighted}{indicated whether the network is weighted}
 
@@ -47,8 +61,8 @@ for identifying hub nodes. Possible values are \code{degree},
 quantile of the fitted log-normal distribution (if \code{lnormFit = TRUE})
 or of the empirical distribution of centrality values.}
 
-\item{connect}{logical indicating whether edge and vertex connectivity should
-be calculated. Might be disabled to reduce execution time.}
+\item{connectivity}{logical indicating whether edge and vertex connectivity 
+should be calculated. Might be disabled to reduce execution time.}
 
 \item{weightDeg}{if \code{TRUE}, the weighted degree is used.}
 

@@ -9,6 +9,7 @@
   object,
   groupNames = NULL,
   pAdjust = TRUE,
+  showLargestComp = TRUE,
   showCentr = "all",
   numbNodes = 10L,
   digits = 3L,
@@ -28,6 +29,9 @@ from \code{object}}
 
 \item{pAdjust}{logical. If \code{TRUE} the permutation p-values adjusted for
 multiple testing are shown.}
+
+\item{showLargestComp}{logical. If \code{TRUE} (default), global properties
+are also shown for the largest connected component of the network.}
 
 \item{showCentr}{character vector indicating for which centrality measures
 the results (values for both groups, difference and p-values resulting from

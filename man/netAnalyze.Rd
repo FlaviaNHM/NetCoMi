@@ -6,13 +6,16 @@
 \usage{
 netAnalyze(
   net,
+  sPathAlgo = "dijkstra",
+  sPathNorm = TRUE,
+  sPathDisconnected = "maxPath",
+  connectivity = TRUE,
   clustMethod = NULL,
   clustPar = NULL,
   clustPar2 = NULL,
   hubPar = "eigenvector",
   hubQuant = 0.95,
   lnormFit = FALSE,
-  connect = TRUE,
   weightDeg = FALSE,
   normDeg = TRUE,
   normBetw = TRUE,
@@ -24,6 +27,38 @@ netAnalyze(
 \arguments{
 \item{net}{object of class \code{microNet} inheriting from a call to
 \code{\link{netConstruct}}}
+
+\item{sPathAlgo}{character indicating the algorithm used for computing
+the shortest paths between all node pairs. \code{\link[igraph]{distances}} 
+is used for shortest path calculation. Possible values are: "unweighted", 
+"dijkstra" (default), "bellman-ford", "johnson", or "automatic" (the 
+fastest suitable algorithm is used). The shortest paths are needed for the 
+average (shortest) path length and closeness centrality.}
+
+\item{sPathNorm}{logical. If \code{TRUE} (default), shortest paths are 
+normalized by average dissimilarity (only connected nodes are considered). 
+That means, a path is interpreted as steps with average dissimilarity. 
+If \code{FALSE}, the shortest path is the minimum sum of dissimilarities 
+between two nodes.}
+
+\item{sPathDisconnected}{character indicating how to handle disconnected 
+components. A component (single node or subnetwork) is disconnected if 
+there is no path between the component and all other nodes in the network.
+Possible options are:
+\describe{
+\item{\code{"infinity"}}{Shortest paths between unconnected nodes are set
+to infinity and thus ignored in average shortest path and closeness 
+centrality calculation. As a consequence, a highly connected network may 
+have a higher average path length than a less connected network.}
+\item{\code{"maxPath"}}{Default. The shortest path length (unnormalized) 
+between unconnected components is set to the number of nodes (N) and 
+thus longer than the maximum possible path length. In unweighted
+networks, the maximum path length is N-1, and in weighted networks (N-1)*1, 
+since the highest possible dissimilarity is one.}
+}}
+
+\item{connectivity}{logical indicating whether edge and vertex connectivity 
+should be calculated. Might be disabled to reduce execution time.}
 
 \item{clustMethod}{character indicating the clustering algorithm. Possible
 values are "hierarchical" for a hierarchical algorithm based on
@@ -51,9 +86,6 @@ measures. See details.}
 quantile of the fitted log-normal distribution (if \code{lnormFit = TRUE})
 or of the empirical distribution of centrality values (if
 \code{lnormFit = FALSE}, which is default).}
-
-\item{connect}{logical indicating whether edge and vertex connectivity should
-be calculated. Might be disabled to reduce execution time.}
 
 \item{weightDeg}{if \code{TRUE}, the weighted degree is used (see
 \code{\link[igraph]{strength}}). Is automatically set to TRUE for a fully
