@@ -98,10 +98,11 @@ calc_association <- function(countMat, measure, measurePar, verbose){
     spiecres <- do.call(fun_spieceasi, measurePar)
 
     if(spiecres$est$method == "glasso"){
-      secor <- cov2cor(getOptCov(spiecres))
+      secor <- cov2cor(as.matrix(getOptCov(spiecres)))
       assoMat <- secor*getRefit(spiecres)
+      
     } else{
-      assoMat <- symBeta(getOptBeta(spiecres))
+      assoMat <- symBeta(getOptBeta(spiecres), mode = "ave")
     }
 
     assoMat <- as.matrix(assoMat)
@@ -125,7 +126,7 @@ calc_association <- function(countMat, measure, measurePar, verbose){
     opt.K <- springres$output$stars$opt.index
 
     assoMat <- as.matrix(SpiecEasi::symBeta(springres$output$est$beta[[opt.K]],
-                                            mode = 'maxabs'))
+                                            mode = "ave"))
 
     colnames(assoMat) <- rownames(assoMat) <- colnames(countMat)
     diag(assoMat) <- 1
