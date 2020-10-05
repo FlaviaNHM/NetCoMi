@@ -39,7 +39,7 @@ norm_counts <- function(countMat, normMethod, normParam, zeroMethod, needfrac,
     if(is.null(normParam$sl)) normParam$sl <- 100
 
     if(verbose %in% 2:3){
-      message("Execute cumNormMat() for cumulative sum scaling ... ",
+      message("Execute cumNormMat(){metagenomeSeq} for cumulative sum scaling ... ",
               appendLF = FALSE)
     }
     countMat_norm <- t(do.call("cumNormMat", normParam))
@@ -63,7 +63,7 @@ norm_counts <- function(countMat, normMethod, normParam, zeroMethod, needfrac,
     if(is.null(normParam$sample)) normParam$sample <- min(rowSums(countMat))
 
     if(verbose %in% 2:3){
-      message("Execute rrarefy() for rarefaction ... ", appendLF = FALSE)
+      message("Execute rrarefy(){vegan} for rarefaction ... ", appendLF = FALSE)
     }
     countMat_norm <- do.call("rrarefy", normParam)
     if(verbose %in% 2:3) message("Done.")
@@ -75,7 +75,7 @@ norm_counts <- function(countMat, normMethod, normParam, zeroMethod, needfrac,
     normParam$object <- countMat
 
     if(verbose %in% 2:3){
-      message("Execute varianceStabilizingTransformation() for VST normalization ... ",
+      message("Execute varianceStabilizingTransformation(){DESeq2} for VST normalization ... ",
               appendLF = FALSE)
     }
     if(zeroMethod == "none"){
@@ -105,7 +105,7 @@ norm_counts <- function(countMat, normMethod, normParam, zeroMethod, needfrac,
 
     normParam$x <- countMat
     if(verbose %in% 2:3){
-      message("Execute cenLR() for clr transformation ... ",
+      message("Execute cenLR(){robCompositions} for clr transformation ... ",
               appendLF = FALSE)
     }
 
@@ -117,8 +117,17 @@ norm_counts <- function(countMat, normMethod, normParam, zeroMethod, needfrac,
     attributes(countMat_norm)$scale <- "clr transformed"
     
   } else if(normMethod == "mclr"){
+    
     normParam$dat <- countMat
-    countMat_norm <- do.call("mclr", normParam)
+    fun_mclr <- get("mclr", asNamespace("SPRING"))
+    
+    if(verbose %in% 2:3){
+      message("Execute mclr(){SPRING} for mclr transformation ... ",
+              appendLF = FALSE)
+    }
+    
+    countMat_norm <- do.call(fun_mclr, normParam)
+    if(verbose %in% 2:3) message("Done.")
  
   } else{
     warning("No normalization conducted. ",

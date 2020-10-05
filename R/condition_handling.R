@@ -15,7 +15,7 @@ condition_handling <- function(dataType, assoType, data2, measure, normMethod,
   }
 
   if(measure %in% c("pearson", "spearman", "bicor")){
-    if(!normMethod %in% c("VST", "clr")){
+    if(!normMethod %in% c("VST", "clr", "mclr")){
       if(verbose > 0){
         message("Attention! The chosen combination of association measure
 and normalization is not robust to compositional effects.\n")
