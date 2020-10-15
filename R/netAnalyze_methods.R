@@ -7,8 +7,6 @@
 #' @param groupNames character vector with two elements giving the group names
 #'   corresponding to the two networks. If \code{NULL}, the names are adopted
 #'   from \code{object}. Ignored if \code{object} contains a single network.
-#' @param showLargestComp logical. If \code{TRUE} (default), global properties
-#'   are also shown for the largest connected component of the network.
 #' @param showCentr character vector indicating for which centrality measures
 #'   the results shall be printed. Possible values are "all", "degree",
 #'   "betweenness", "closeness", "eigenvector" and "none".
@@ -30,7 +28,7 @@
 #' @rdname summarize.microNetProps
 #' @export
 summary.microNetProps <- function(object, groupNames = NULL, 
-                                  showLargestComp = TRUE, showCentr = "all", 
+                                  showCentr = "all", 
                                   numbNodes = NULL, digits = 5L, ...){
 
   showCentr <- match.arg(showCentr, choices = c("all", "none", "degree",
@@ -65,121 +63,103 @@ summary.microNetProps <- function(object, groupNames = NULL,
     group1 <- group2 <- NULL
   }
 
-
   #============================================================
   # global network properties (whole network)
-  avPathname <- ifelse(object$paramsProperties$sPathNorm, 
-                       "average (shortest) path length**",
-                       "average (shortest) path length")
+
+  glob_rnames <- c("Number of connected components", 
+                   "Clustering coefficient",
+                   "Moduarity",
+                   "Positive-to-negative ratio",
+                   "Edge density",
+                   "Natural connectivity")
   
-  glob_rownames <- c("average dissimilarity*",
-                     avPathname,
-                     "edge density",
-                     "vertex connectivity",
-                     "edge connectivity",
-                     "clustering coefficient",
-                     "modularity",
-                     "positive-to-negative ratio")
-  glob_names1 <- c("avDiss1", "avPath1", "density1", "vertConnect1", 
-                   "edgeConnect1", "clustCoef1", "modularity1", "pnRatio1")
-  glob_names2 <- c("avDiss2", "avPath2", "density2", "vertConnect2", 
-                   "edgeConnect2", "clustCoef2", "modularity2", "pnRatio2")
-  
+  glob_rnames_lcc <- c("Relative LCC size", 
+                       "Clustering coefficient",
+                       "Moduarity",
+                       "Positive-to-negative ratio",
+                       "Edge density",
+                       "Natural connectivity",
+                       "Vertex connectivity",
+                       "Edge connectivity",
+                       "Average dissimilarity*",
+                       "Average (shortest) path length**")
+    
+  glob_names <- c("nComp", "clustCoef", "modularity", "pnRatio", "density", 
+                  "natConnect")
+
+  glob_names_lcc <- c("lccSizeRel", "clustCoef", "modularity", "pnRatio", 
+                       "density", "natConnect", "vertConnect", "edgeConnect",
+                       "avDiss", "avPath")
+
   if(is.na(object$globalProps$modularity1)){
     # exclude modularity
-    glob_rownames <- glob_rownames[-7]
-    glob_names1 <- glob_names1[-7]
-    glob_names2 <- glob_names2[-7]
+    glob_rnames <- glob_rnames[-3]
+    glob_rnames_lcc <- glob_rnames_lcc[-3]
+    glob_names <- glob_names[-3]
+    glob_names_lcc <- glob_names_lcc[-3]
+    
+    if(is.na(object$globalPropsLCC$vertConnect1)){
+      # exclude connectivity measures
+      glob_rnames_lcc <- glob_rnames_lcc[-c(6,7)]
+      glob_names_lcc <- glob_names_lcc[-c(6,7)]
+    } 
+  } else if(is.na(object$globalPropsLCC$vertConnect1)){
+    # exclude connectivity measures
+    glob_rnames_lcc <- glob_rnames_lcc[-c(7,8)]
+    glob_names_lcc <- glob_names_lcc[-c(7,8)]
   }
 
-  if(is.na(object$globalProps$vertConnect1)){
-    # exclude connectivity measures
-    glob_rownames <- glob_rownames[-c(4,5)]
-    glob_names1 <- glob_names1[-c(4,5)]
-    glob_names2 <- glob_names2[-c(4,5)]
-  } 
-  
   if(twonets){
-    glob_probs <- as.data.frame(matrix(0, nrow = length(glob_rownames), ncol = 2, 
-                                       dimnames = list(glob_rownames,
+    glob_probs <- as.data.frame(matrix(0, nrow = length(glob_rnames), ncol = 2, 
+                                       dimnames = list(glob_rnames,
                                                        c(group1, group2))))
+    glob_probs_lcc <- as.data.frame(matrix(0, nrow = length(glob_rnames_lcc), 
+                                           ncol = 2, 
+                                           dimnames = list(glob_rnames_lcc,
+                                                           c(group1, group2))))
   } else{
-    glob_probs <- as.data.frame(matrix(0, nrow = length(glob_rownames), ncol = 1, 
-                                       dimnames = list(glob_rownames,
-                                                       " ")))
+    glob_probs <- as.data.frame(matrix(0, nrow = length(glob_rnames), ncol = 1, 
+                                       dimnames = list(glob_rnames, " ")))
+    
+    glob_probs_lcc <- as.data.frame(matrix(0, nrow = length(glob_rnames_lcc), 
+                                           ncol = 1, 
+                                           dimnames = list(glob_rnames_lcc, " ")))
   }
   
-  for(i in 1:length(glob_rownames)){
-    glob_probs[i, 1] <- round(as.numeric(object$globalProps[glob_names1[i]]), 
+  for(i in 1:length(glob_names)){
+    glob_probs[i, 1] <- round(as.numeric(object$globalProps[paste0(glob_names[i], 1)]), 
                               digits = digits)
   }
   
+  for(i in 1:length(glob_names_lcc)){
+    glob_probs_lcc[i, 1] <- round(as.numeric(
+      object$globalPropsLCC[paste0(glob_names_lcc[i], 1)]), digits = digits)
+  }
+  
   if(twonets){
-    for(i in 1:length(glob_rownames)){
-      glob_probs[i, 2] <- round(as.numeric(object$globalProps[glob_names2[i]]), 
+    for(i in 1:length(glob_names)){
+      glob_probs[i, 2] <- round(as.numeric(object$globalProps[paste0(glob_names[i], 2)]), 
                                 digits = digits)
+    }
+    
+    for(i in 1:length(glob_names_lcc)){
+      glob_probs_lcc[i, 2] <- round(as.numeric(
+        object$globalPropsLCC[paste0(glob_names_lcc[i], 2)]), digits = digits)
     }
     
   }
   
-  #============================================================
-  # global network properties (largest component)
-
-  if(showLargestComp){
-    glob_rownames <- c("component size",
-                       "average dissimilarity*",
-                       avPathname,
-                       "edge density",
-                       "vertex connectivity",
-                       "edge connectivity",
-                       "clustering coefficient",
-                       "modularity",
-                       "positive-to-negative ratio")
-    glob_names1 <- c("lcSize1", "avDiss1", "avPath1", "density1", "vertConnect1", 
-                     "edgeConnect1", "clustCoef1", "modularity1", "pnRatio1")
-    glob_names2 <- c("lcSize2", "avDiss2", "avPath2", "density2", "vertConnect2", 
-                     "edgeConnect2", "clustCoef2", "modularity2", "pnRatio2")
-    
-    if(is.na(object$globalProps$modularity1)){
-      # exclude modularity
-      glob_rownames <- glob_rownames[-8]
-      glob_names1 <- glob_names1[-8]
-      glob_names2 <- glob_names2[-8]
-    }
-    
-    if(is.na(object$globalProps$vertConnect1)){
-      # exclude connectivity measures
-      glob_rownames <- glob_rownames[-c(5,6)]
-      glob_names1 <- glob_names1[-c(5,6)]
-      glob_names2 <- glob_names2[-c(5,6)]
-    } 
-    
-    if(twonets){
-      glob_probs_lc <- as.data.frame(matrix(0, nrow = length(glob_rownames), ncol = 2, 
-                                            dimnames = list(glob_rownames,
-                                                            c(group1, group2))))
-    } else{
-      glob_probs_lc <- as.data.frame(matrix(0, nrow = length(glob_rownames), ncol = 1, 
-                                            dimnames = list(glob_rownames,
-                                                            " ")))
-    }
-    
-    for(i in 1:length(glob_rownames)){
-      glob_probs_lc[i, 1] <- round(as.numeric(object$globalPropsLC[glob_names1[i]]), 
-                                   digits = digits)
-    }
-    
-    if(twonets){
-      for(i in 1:length(glob_rownames)){
-        glob_probs_lc[i, 2] <- round(as.numeric(object$globalPropsLC[glob_names2[i]]), 
-                                     digits = digits)
-      }
-      
-    }
+  nComp1 <- object$globalProps$nComp1
+  nComp2 <- ifelse(twonets, object$globalProps$nComp2, 1)
+  
+  if(nComp1 == 1 && nComp2 == 1){
+    glob_probs <- rbind(glob_probs[1, , drop = FALSE], 
+                        glob_probs_lcc[-1, , drop = FALSE])
+    is_disconnected <- FALSE
   } else{
-    glob_probs_lc <- NULL
+    is_disconnected <- TRUE
   }
-
+  
   #============================================================
   # clustering
   
@@ -300,7 +280,6 @@ summary.microNetProps <- function(object, groupNames = NULL,
           
           rnames <- c(rownames(mat1), "", rownames(mat2))
           
-          data.frame(mat1, mat2)
           mat.tmp <- rbind(mat1, c("______","______"), mat2, make.row.names = FALSE)
           mat <- cbind(rnames, mat.tmp)
           colnames(mat) <- c(" ", colnames(mat)[2:3])
@@ -313,10 +292,12 @@ summary.microNetProps <- function(object, groupNames = NULL,
     }
   }
 
-  structure(list(glob_probs = glob_probs, glob_probs_lc = glob_probs_lc, 
+  structure(list(glob_probs = glob_probs, glob_probs_lcc = glob_probs_lcc, 
                  clust = clust, hubs = hubs, central = top_centr, 
                  group1 = group1, group2 = group2, 
                  sPathNorm = object$paramsProperties$sPathNorm, 
+                 is_disconnected = is_disconnected,
+                 centrLCC = object$paramsProperties$centrLCC, 
                  call = object$call),
             class = "summary.microNetProps")
 }
@@ -337,24 +318,33 @@ print.summary.microNetProps <- function(x, ...){
   cat("\nGlobal network properties\n")
   cat("`````````````````````````\n")
   
-  if(!is.null(x$glob_probs_lc)) cat("Whole network:\n")
-  print(x$glob_probs)
-  
-  if(!is.null(x$glob_probs_lc)){
-    cat("\nLargest component:\n")
-    print(x$glob_probs_lc)
+  if(x$is_disconnected){
+    cat("Largest connected component (LCC):\n")
+    print(x$glob_probs_lcc)
+    
+    cat("\nWhole network:\n")
+    print(x$glob_probs)
+  } else{
+    print(x$glob_probs)
   }
+
+  cat("\n *Dissimilarity = 1 - edge weight")
   
   if(x$sPathNorm){
-    cat("\n *Dissimilarity = 1 - edge weight")
-    cat("\n**Path length: Steps with average dissimilarity")
+    cat("\n**Path length: Units with average dissimilarity")
   } else{
-    cat("\n*Dissimilarity = 1 - edge weight")
+    cat("\n**Path length: Sum of dissimilarities along the path")
   }
 
   if(ncol(x$clust[[1]]) != 0){
-    cat("\n\nClusters\n")
-    cat("````````\n")
+    if(x$is_disconnected){
+      cat("\n\nClusters (whole network)\n")
+      cat("````````````````````````\n")
+    } else{
+      cat("\n\nClusters\n")
+      cat("````````\n")
+    }
+
     if(length(x$clust) == 2){
       cat(x$group1, ":", sep = "")
       print(x$clust[[1]])
@@ -367,18 +357,22 @@ print.summary.microNetProps <- function(x, ...){
 
   cat("\n\nHubs (in alphabetical/numerical order)\n")
   if(ncol(x$hubs) == 2){
-    cat("````\n")
+    cat("``````````````````````````````````````\n")
     print(x$hubs, row.names = FALSE, quote = TRUE)
   } else{
-    cat("`````")
+    cat("``````````````````````````````````````")
     print(x$hubs)
   }
-  
+
   if(!is.null(x$central)){
     show_rownames <- ifelse(ncol(x$hubs) == 1, TRUE, FALSE)
     
-    cat("\n\nCentrality measures (in decreasing order)\n")
-    cat("```````````````````")
+    if(x$is_disconnected && x$centrLCC){
+    cat("\n\nCentrality measures* (in decreasing order)\n")
+    } else{
+      cat("\n\nCentrality measures (in decreasing order)\n")
+    }
+    cat("``````````````````````````````````````````")
     
     if(!is.null(x$central$degree1)){
       cat("\nDegree:\n")
@@ -399,6 +393,11 @@ print.summary.microNetProps <- function(x, ...){
       cat("\nEigenvector centrality:\n")
       print(x$central$eigenv1, row.names = show_rownames)
     }
+
+    if(x$is_disconnected && x$centrLCC){
+      cat("______________________________________________\n")
+      cat("*Centrality of disconnected components is zero")
+    } 
     
   }
 }

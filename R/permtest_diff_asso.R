@@ -49,8 +49,7 @@
 #' @param logFile character string naming the log file within which the current
 #'   iteration number is stored
 #' @param seed an optional seed for reproducibility of the results
-#' @param assoPerm list with two elements containing permutation association
-#'   matrices for the two groups.
+#' @param assoPerm not used anymore.
 #' @references{\insertRef{gill2010statistical}{NetCoMi}}
 #' @references{\insertRef{knijnenburg2009fewer}{NetCoMi}}
 #'
@@ -66,7 +65,14 @@ permtest_diff_asso <- function(countMat1, countMat2, assoMat1, assoMat2,
                            lfdrThresh = 0.2, nPerm = 1000,
                            matchDesign = NULL, cores = 4,
                            verbose = TRUE, logFile = "log.txt",
-                           seed = NULL, assoPerm = NULL, storePermCounts = FALSE){
+                           seed = NULL, 
+                           fileLoadAssoPerm  = NULL,
+                           storeAssoPerm = FALSE,
+                           fileStoreAssoPerm = "assoPerm",
+                           storeCountsPerm = FALSE,
+                           fileStoreCountsPerm = c("countsPerm1", "countsPerm2"),
+                           assoPerm = NULL){
+
 
   if(!is.null(seed)){
     set.seed(seed)
@@ -77,8 +83,7 @@ permtest_diff_asso <- function(countMat1, countMat2, assoMat1, assoMat2,
   n2 <- nrow(countMat2)
   n <- n1 + n2
   counts <- rbind(countMat1, countMat2)
-  p <- ncol(assoMat1)
-  
+
   #_____________________________________________________
   if(is.null(matchDesign)){
     
@@ -147,6 +152,26 @@ permtest_diff_asso <- function(countMat1, countMat2, assoMat1, assoMat2,
     
     
   }
+  
+  #_____________________________________________________
+  # store permutation matrices and associations in an external file
+  
+  if(storeAssoPerm && is.null(fileLoadAssoPerm )){
+    fmat = fm.create(filenamebase = fileStoreAssoPerm, 
+                     nrow = (nVars * nPerm), ncol = (2 * nVars))
+  } else if(!is.null(fileLoadAssoPerm )){
+    fmat = fm.open(filenamebase = fileLoadAssoPerm , readonly = TRUE)
+  }
+  
+  if(storeCountsPerm && is.null(fileLoadAssoPerm )){
+    stopifnot(is.character(fileStoreCountsPerm) && 
+                length(fileStoreCountsPerm == 2))
+    
+    fmat_counts1 <- fm.create(filenamebase = fileStoreCountsPerm[1], 
+                              nrow = (n1 * nPerm), ncol = nVars)
+    fmat_counts2 <- fm.create(filenamebase = fileStoreCountsPerm[2], 
+                              nrow = (n2 * nPerm), ncol = nVars)
+  }
 
   #_____________________________________________________
   # generate teststatistics for permutated data
@@ -201,33 +226,57 @@ permtest_diff_asso <- function(countMat1, countMat2, assoMat1, assoMat2,
 
                       if(!is.null(seed)) set.seed(seeds[p])
                       
-                      countMat1.tmp <- counts[which(perm_group_mat[p, ] == 1), ]
-                      countMat2.tmp <- counts[which(perm_group_mat[p, ] == 2), ]
-
                       if(!is.null(assoPerm)){
                         assoMat1.tmp <- assoPerm[[1]][[p]]
                         assoMat2.tmp <- assoPerm[[2]][[p]]
+                        count1.tmp <- count2.tmp <- NULL
+                        
+                      } else if(!is.null(fileLoadAssoPerm )){
+                        
+                        stopifnot(is.character(fileLoadAssoPerm ))
+                        
+                        assoMat1.tmp <- fmat[(p-1) * nVars + (1:nVars), 
+                                             1:nVars]
+                        assoMat2.tmp <- fmat[(p-1) * nVars + (1:nVars), 
+                                             nVars + (1:nVars)]
+                        
+                        dimnames(assoMat1.tmp) <- dimnames(assoMat1)
+                        dimnames(assoMat2.tmp) <- dimnames(assoMat2)
+                        
+                        count1.tmp <- count2.tmp <- NULL
+                        
                       } else{
+                        
+                        countMat1.tmp <- counts[which(perm_group_mat[p, ] == 1), ]
+                        countMat2.tmp <- counts[which(perm_group_mat[p, ] == 2), ]
+                        
+                        if(storeCountsPerm && is.null(fileLoadAssoPerm )){
+                          fmat_counts1[(p-1) * n1 + (1:n1), 
+                                       1:nVars] <- count1.tmp
+                          fmat_counts2[(p-1) * n2 + (1:n2), 
+                                       1:nVars] <- count2.tmp
+                        }
 
                         assoMat1.tmp <- calc_association(countMat1.tmp,
                                                          measure = measure,
                                                          measurePar = measurePar,
                                                          verbose = FALSE)
+                        
                         assoMat2.tmp <- calc_association(countMat2.tmp,
                                                          measure = measure,
                                                          measurePar = measurePar,
                                                          verbose = FALSE)
+                        
+                        if(storeAssoPerm && is.null(fileLoadAssoPerm)){
+                          
+                          fmat[(p-1) * nVars + (1:nVars), 
+                               1:nVars] <- assoMat1.tmp
+                          fmat[(p-1) * nVars + (1:nVars), 
+                               nVars + (1:nVars)] <- assoMat2.tmp
+                        }
                       }
 
                       returnlist <- list()
-
-                      returnlist[["assoMat1"]] <- assoMat1.tmp
-                      returnlist[["assoMat2"]] <- assoMat2.tmp
-                      
-                      if(storePermCounts){
-                        returnlist[["countMat1"]] <- countMat1.tmp
-                        returnlist[["countMat2"]] <- countMat2.tmp
-                      }
 
                       # teststatistics for simulated data
                       if("connect.pairs" %in% method){
@@ -254,6 +303,17 @@ permtest_diff_asso <- function(countMat1, countMat2, assoMat1, assoMat2,
                       returnlist
                     }
   if(cores > 1) stopCluster(cl)
+  
+  if(storeAssoPerm && is.null(fileLoadAssoPerm )){
+    close(fmat)
+  } else if(!is.null(fileLoadAssoPerm )){
+    close(fmat)
+  }
+  
+  if(storeCountsPerm && is.null(fileLoadAssoPerm )){
+    close(fmat_counts1)
+    close(fmat_counts2)
+  }
   #____________________________________________________
 
   output <- list()
@@ -353,27 +413,6 @@ permtest_diff_asso <- function(countMat1, countMat2, assoMat1, assoMat2,
 
     pvalConnectNetwork <- sum(connectNetwork >= connectNetworkOrig) / nPerm
     output[["pvalConnectNetwork"]] <- pvalConnectNetwork
-  }
-
-
-  assoPerm1 <- assoPerm2 <- list()
-  for(i in 1:nPerm){
-    assoPerm1[[i]] <- result[[i]]$assoMat1
-    assoPerm2[[i]] <- result[[i]]$assoMat2
-  }
-
-  output[["assoPerm1"]] <- assoPerm1
-  output[["assoPerm2"]] <- assoPerm2
-  
-  if(storePermCounts){
-    permCounts1 <- permCounts2 <- list()
-    for(i in 1:nPerm){
-      permCounts1[[i]] <- result[[i]]$countMat1
-      permCounts2[[i]] <- result[[i]]$countMat2
-    }
-    
-    output[["countsPerm1"]] <- permCounts1
-    output[["countsPerm2"]] <- permCounts2
   }
 
   return(output)

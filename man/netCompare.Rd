@@ -17,10 +17,13 @@ netCompare(
   logFile = NULL,
   seed = NULL,
   verbose = TRUE,
-  storeAssoPerm = TRUE,
+  fileLoadAssoPerm = NULL,
+  storeAssoPerm = FALSE,
+  fileStoreAssoPerm = "assoPerm",
+  storeCountsPerm = FALSE,
+  fileStoreCountsPerm = c("countsPerm1", "countsPerm2"),
   assoPerm = NULL,
-  dissPerm = NULL,
-  storePermCounts = FALSE
+  dissPerm = NULL
 )
 }
 \arguments{
@@ -80,10 +83,28 @@ to \code{NULL} so that no log file is generated.}
 
 \item{verbose}{logical. If \code{TRUE} (default), status messages are shown.}
 
+\item{fileLoadAssoPerm}{character giving the name (without extenstion) 
+or path of the file storing the "permuted" association/dissimilarity 
+matrices that have been exported by setting \code{storeAssoPerm} to 
+\code{TRUE}. Only used for permutation tests. Set to \code{NULL} if no 
+existing associations should be used.}
+
 \item{storeAssoPerm}{logical indicating whether the association (or
-dissimilarity) matrices for the permuted data should be returned. If
-\code{TRUE} (default), \code{assoPerm} (or \code{dissPerm}) as part of the
-output can be passed to \code{netCompare} again to save runtime.}
+dissimilarity) matrices for the permuted data should be stored in a file.
+The filename is given via \code{fileStoreAssoPerm}. If \code{TRUE}, 
+the computed "permutation" association/dissimilarity matrices can be reused
+via \code{fileLoadAssoPerm} to save runtime. Defaults to \code{FALSE}.}
+
+\item{fileStoreAssoPerm}{character giving the file name to store a matrix
+containing a matrix with associations/dissimilarities for the permuted 
+data. Can also be a path.}
+
+\item{storeCountsPerm}{logical indicating whether the permuted count matrices
+should be stored in an external file. Defaults to \code{FALSE}.}
+
+\item{fileStoreCountsPerm}{character vector with two elements giving the 
+names of two files storing the permuted count matrices belonging to the 
+two groups.}
 
 \item{assoPerm}{a list with two elements used for the permutation procedure.
 Each entry must contain association matrices for \code{"nPerm"}
@@ -93,9 +114,6 @@ output either returned from \code{diffnet} or from
 
 \item{dissPerm}{usage analog to \code{assoPerm} if a dissimilarity measure
 has been used for network construction.}
-
-\item{storePermCounts}{logical; If \code{TRUE}, the permuted count matrices
-are returned.}
 }
 \value{
 Returned is an object of class \code{microNetComp}. Important

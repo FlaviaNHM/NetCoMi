@@ -292,8 +292,8 @@ An object of class \code{microNet} containing the following elements:
   association networks)\cr
   \code{countMat1, countMat2}\tab Count matrices, where taxa and samples are
   filtered according to \code{filtTax} and \code{filtSamp}\cr
-  \code{normCounts1, normCounts2}\tab Counts that are normalized according to
-  \code{normMethod}\cr
+  \code{normCounts1, normCounts2}\tab Count matrices after zero handling and
+  normalization\cr
   \code{groups}\tab Names of the factor levels according to which the groups
   have been built\cr
   \code{softThreshPower}\tab Determined (or given) power for

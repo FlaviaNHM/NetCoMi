@@ -1,8 +1,8 @@
 calc_diff_props <- function(adja1, adja2, dissMat1, dissMat2, assoMat1, assoMat2,
-                            sPathDisconnected, sPathNorm, sPathAlgo,
+                            sPathNorm, sPathAlgo, connectivity, normNatConnect,
                             weighted, clustMethod, clustPar, clustPar2, hubPar,
-                            hubQuant, jaccQuant, lnormFit, connectivity,
-                            weightDeg, normDeg, normBetw, normClose, normEigen,
+                            hubQuant, jaccQuant, lnormFit, weightDeg, 
+                            normDeg, normBetw, normClose, normEigen, centrLCC,
                             testJacc = TRUE, jaccTestGreater = FALSE,
                             testRand = TRUE, nPermRand = 1000){
 
@@ -13,27 +13,29 @@ calc_diff_props <- function(adja1, adja2, dissMat1, dissMat2, assoMat1, assoMat2
 
   # calculate network properties
   props1 <- calc_props(adjaMat = adja1, dissMat = dissMat1, assoMat = assoMat1, 
-                       sPathDisconnected = sPathDisconnected,
                        sPathNorm = sPathNorm, sPathAlgo = sPathAlgo,
+                       connectivity = connectivity,
+                       normNatConnect = normNatConnect,
                        weighted = weighted, isempty = isempty1, 
                        clustMethod = clustMethod, clustPar = clustPar, 
                        hubPar = hubPar, hubQuant = hubQuant, 
-                       lnormFit = lnormFit, connectivity = connectivity,
-                       weightDeg = weightDeg, normDeg = normDeg,
-                       normBetw = normBetw, normClose = normClose,
-                       normEigen = normEigen, 
+                       lnormFit = lnormFit, weightDeg = weightDeg, 
+                       normDeg = normDeg, normBetw = normBetw, 
+                       normClose = normClose, normEigen = normEigen, 
+                       centrLCC = centrLCC,
                        jaccard = TRUE, jaccQuant = jaccQuant)
 
   props2 <- calc_props(adjaMat = adja2, dissMat = dissMat2, assoMat = assoMat2, 
-                       sPathDisconnected = sPathDisconnected,
                        sPathNorm = sPathNorm, sPathAlgo = sPathAlgo,
+                       connectivity = connectivity,
+                       normNatConnect = normNatConnect,
                        weighted = weighted, isempty = isempty2, 
                        clustMethod = clustMethod, clustPar = clustPar2, 
                        hubPar = hubPar, hubQuant = hubQuant, 
-                       lnormFit = lnormFit, connectivity = connectivity,
-                       weightDeg = weightDeg, normDeg = normDeg,
-                       normBetw = normBetw, normClose = normClose,
-                       normEigen = normEigen, 
+                       lnormFit = lnormFit, weightDeg = weightDeg, 
+                       normDeg = normDeg, normBetw = normBetw, 
+                       normClose = normClose, normEigen = normEigen, 
+                       centrLCC = centrLCC,
                        jaccard = TRUE, jaccQuant = jaccQuant)
 
 
@@ -58,21 +60,21 @@ calc_diff_props <- function(adja1, adja2, dissMat1, dissMat2, assoMat1, assoMat2
   avDiss1 <- props1$avDiss
   avDiss2 <- props2$avDiss
   
-  avDiss1_lc <- props1$avDiss_lc
-  avDiss2_lc <- props2$avDiss_lc
+  avDiss1_lcc <- props1$avDiss_lcc
+  avDiss2_lcc <- props2$avDiss_lcc
   
   if(is.na(avDiss1)){
     avDiss1 <- 0
-    avDiss1_lc <- 0
+    avDiss1_lcc <- 0
   } 
   
   if(is.na(avDiss2)){
     avDiss2 <- 0
-    avDiss2_lc <- 0
+    avDiss2_lcc <- 0
   }
   
   diffdiss <- abs(avDiss1 - avDiss2)
-  diffdiss_lc <- abs(avDiss1_lc - avDiss2_lc)
+  diffdiss_lcc <- abs(avDiss1_lcc - avDiss2_lcc)
   
   #--------------------------------------------------------------------------
   ### Average Path Length (or Mean Distance)
@@ -80,85 +82,98 @@ calc_diff_props <- function(adja1, adja2, dissMat1, dissMat2, assoMat1, assoMat2
   avPath1 <- props1$avPath
   avPath2 <- props2$avPath
   
-  avPath1_lc <- props1$avPath_lc
-  avPath2_lc <- props2$avPath_lc
+  avPath1_lcc <- props1$avPath_lcc
+  avPath2_lcc <- props2$avPath_lcc
 
   if(is.na(avPath1)){
     avPath1 <- 0
-    avPath1_lc <- 0
+    avPath1_lcc <- 0
   } 
   
   if(is.na(avPath2)){
     avPath2 <- 0
-    avPath2_lc <- 0
+    avPath2_lcc <- 0
   }
 
   diffpath <- abs(avPath1 - avPath2)
-  diffpath_lc <- abs(avPath1_lc - avPath2_lc)
+  diffpath_lcc <- abs(avPath1_lcc - avPath2_lcc)
 
   #--------------------------------------------------------------------------
-  ### Clustering
+  ### Clustering coefficient
 
   clustCoef1 <- props1$clustCoef
   clustCoef2 <- props2$clustCoef
   
-  clustCoef1_lc <- props1$clustCoef_lc
-  clustCoef2_lc <- props2$clustCoef_lc
+  clustCoef1_lcc <- props1$clustCoef_lcc
+  clustCoef2_lcc <- props2$clustCoef_lcc
 
   if(is.na(clustCoef1)){
     clustCoef1 <- 0
-    clustCoef1_lc <- 0
+    clustCoef1_lcc <- 0
   } 
   
   if(is.na(clustCoef2)){
     clustCoef2 <- 0
-    clustCoef2_lc <- 0
+    clustCoef2_lcc <- 0
   } 
   
   diffclustcoef <- abs(clustCoef1 - clustCoef2)
-  diffclustcoef_lc <- abs(clustCoef1_lc - clustCoef2_lc)
+  diffclustcoef_lcc <- abs(clustCoef1_lcc - clustCoef2_lcc)
 
   #--------------------------------------------------------------------------
   # differential Modularity
   if(clustMethod != "none"){
     modul1 <- props1$modul
     modul2 <- props2$modul
-    modul1_lc <- props1$modul_lc
-    modul2_lc <- props2$modul_lc
+    modul1_lcc <- props1$modul_lcc
+    modul2_lcc <- props2$modul_lcc
     diffmod <- abs(modul1 - modul2)
-    diffmod_lc <- abs(modul1_lc - modul2_lc)
+    diffmod_lcc <- abs(modul1_lcc - modul2_lcc)
   } else{
-    modul1 <- modul2 <- modul1_lc <- modul2_lc <- NULL
-    diffmod <- diffmod_lc <- NULL
+    modul1 <- modul2 <- modul1_lcc <- modul2_lcc <- NULL
+    diffmod <- diffmod_lcc <- NULL
   }
 
   #--------------------------------------------------------------------------
   if(connectivity){
     # vertex connectivity
     diffvertconnect <- abs(props1$vertconnect - props2$vertconnect)
-    diffvertconnect_lc <- abs(props1$vertconnect_lc - props2$vertconnect_lc)
+    diffvertconnect_lcc <- abs(props1$vertconnect_lcc - props2$vertconnect_lcc)
     
     # edge connectivity
     diffedgconnect <- abs(props1$edgeconnect - props2$edgeconnect)
-    diffedgconnect_lc <- abs(props1$edgeconnect_lc - props2$edgeconnect_lc)
+    diffedgconnect_lcc <- abs(props1$edgeconnect_lcc - props2$edgeconnect_lcc)
   } else{
-    diffvertconnect <- diffvertconnect_lc <- NULL
-    diffedgconnect <- diffedgconnect_lc <- NULL
+    diffvertconnect <- diffvertconnect_lcc <- NULL
+    diffedgconnect <- diffedgconnect_lcc <- NULL
   }
 
   #--------------------------------------------------------------------------
-  # relative number of edges(density)
+  # natural connectivity
+  diffnatconnect <- abs(props1$natConnect - props2$natConnect)
+  diffnatconnect_lcc <- abs(props1$natConnect_lcc - props2$natConnect_lcc)
+  
+  #--------------------------------------------------------------------------
+  # density (relative number of edges)
   diffdensity <- abs(props1$density - props2$density)
-  diffdensity_lc <- abs(props1$density_lc - props2$density_lc)
+  diffdensity_lcc <- abs(props1$density_lcc - props2$density_lcc)
   
   #--------------------------------------------------------------------------
   # positive-to-negative ratio
   diffpnratio <- abs(props1$pnRatio - props2$pnRatio)
-  diffpnratio_lc <- abs(props1$pnRatio_lc - props2$pnRatio_lc)
+  diffpnratio_lcc <- abs(props1$pnRatio_lcc - props2$pnRatio_lcc)
 
   #--------------------------------------------------------------------------
+  # number of connected components
+  diffncomp <- abs(props1$nComp - props2$nComp)
+  
+  #--------------------------------------------------------------------------
   # size of the largest connected component
-  difflcsize <- abs(props1$lcSize - props2$lcSize)
+  difflccsize <- abs(props1$lccSize - props2$lccSize)
+  
+  #--------------------------------------------------------------------------
+  # relative LCC size
+  difflccsizerel <- abs(props1$lccSizeRel - props2$lccSizeRel)
 
   #--------------------------------------------------------------------------
   # adjusted Rand index for measuring similarity between two clusterings
@@ -203,23 +218,27 @@ calc_diff_props <- function(adja1, adja2, dissMat1, dissMat2, assoMat1, assoMat2
                  jaccEigen = jaccEigen,
                  jaccHub = jaccHub, 
                  randInd = randInd,
-                 diffsGlobal = list(diffDiss = diffdiss,
-                                    diffPath = diffpath,
+                 diffsGlobal = list(diffnComp = diffncomp,
+                                    diffavDiss = diffdiss,
+                                    diffavPath = diffpath,
                                     diffDensity = diffdensity,
                                     diffVertConnect = diffvertconnect,
                                     diffEdgeConnect = diffedgconnect,
+                                    diffNatConnect = diffnatconnect,
                                     diffpnRatio = diffpnratio,
                                     diffClustCoef = diffclustcoef,
                                     diffModul = diffmod),
-                 diffsGlobalLC = list(difflcSize = difflcsize,
-                                      diffDiss = diffdiss_lc,
-                                      diffPath = diffpath_lc,
-                                      diffDensity = diffdensity_lc,
-                                      diffVertConnect = diffvertconnect_lc,
-                                      diffEdgeConnect = diffedgconnect_lc,
-                                      diffpnRatio = diffpnratio_lc,
-                                      diffClustCoef = diffclustcoef_lc,
-                                      diffModul = diffmod_lc),
+                 diffsGlobalLCC = list(difflccSize = difflccsize,
+                                       difflccSizeRel = difflccsizerel,
+                                       diffavDiss = diffdiss_lcc,
+                                      diffavPath = diffpath_lcc,
+                                      diffDensity = diffdensity_lcc,
+                                      diffVertConnect = diffvertconnect_lcc,
+                                      diffEdgeConnect = diffedgconnect_lcc,
+                                      diffNatConnect = diffnatconnect_lcc,
+                                      diffpnRatio = diffpnratio_lcc,
+                                      diffClustCoef = diffclustcoef_lcc,
+                                      diffModul = diffmod_lcc),
                  diffsCentr = list(diffDeg = diffdeg, 
                                    diffBetw = diffbetw,
                                    diffClose = diffclose, 
@@ -237,7 +256,9 @@ calc_diff_props <- function(adja1, adja2, dissMat1, dissMat2, assoMat1, assoMat2
                               eigen1 = props1$eigen, 
                               eigen2 = props2$eigen,
                               hubs1 = props1$hubs, 
-                              hubs2 = props2$hubs2,
+                              hubs2 = props2$hubs,
+                              nComp1 = props1$nComp,
+                              nComp2 = props2$nComp,
                               avDiss1 = avDiss1,
                               avDiss2 = avDiss2,
                               avPath1 = avPath1, 
@@ -248,32 +269,38 @@ calc_diff_props <- function(adja1, adja2, dissMat1, dissMat2, assoMat1, assoMat2
                               vertConnect2 = props2$vertconnect,
                               edgeConnect1 = props1$edgeconnect, 
                               edgeConnect2 = props2$edgeconnect,
+                              natConnect1 = props1$natConnect,
+                              natConnect2 = props2$natConnect,
                               pnRatio1 = props1$pnRatio,
                               pnRatio2 = props2$pnRatio,
                               clustCoef1 = clustCoef1, 
                               clustCoef2 = clustCoef2,
-                              modul1 = modul1, 
-                              modul2 = modul2,
+                              modularity1 = modul1, 
+                              modularity2 = modul2,
                               clust1 = clust1, 
                               clust2 = clust2),
-                 propsLC = list(lcSize1 = props1$lcSize,
-                                lcSize2 = props2$lcSize,
-                                avDiss1 = avDiss1_lc,
-                                avDiss2 = avDiss2_lc,
-                                avPath1 = avPath1_lc, 
-                                avPath2 = avPath2_lc,
-                                density1 = props1$density_lc, 
-                                density2 = props2$density_lc,
-                                vertConnect1 = props1$vertconnect_lc, 
-                                vertConnect2 = props2$vertconnect_lc,
-                                edgeConnect1 = props1$edgeconnect_lc, 
-                                edgeConnect2 = props2$edgeconnect_lc,
-                                pnRatio1 = props1$pnRatio_lc,
-                                pnRatio2 = props2$pnRatio_lc,
-                                clustCoef1 = clustCoef1_lc, 
-                                clustCoef2 = clustCoef2_lc,
-                                modul1 = modul1_lc, 
-                                modul2 = modul2_lc)
+                 propsLCC = list(lccSize1 = props1$lccSize,
+                                lccSize2 = props2$lccSize,
+                                lccSizeRel1 = props1$lccSizeRel,
+                                lccSizeRel2 = props2$lccSizeRel,
+                                avDiss1 = avDiss1_lcc,
+                                avDiss2 = avDiss2_lcc,
+                                avPath1 = avPath1_lcc, 
+                                avPath2 = avPath2_lcc,
+                                density1 = props1$density_lcc, 
+                                density2 = props2$density_lcc,
+                                vertConnect1 = props1$vertconnect_lcc, 
+                                vertConnect2 = props2$vertconnect_lcc,
+                                edgeConnect1 = props1$edgeconnect_lcc, 
+                                edgeConnect2 = props2$edgeconnect_lcc,
+                                natConnect1 = props1$natConnect_lcc,
+                                natConnect2 = props2$natConnect_lcc,
+                                pnRatio1 = props1$pnRatio_lcc,
+                                pnRatio2 = props2$pnRatio_lcc,
+                                clustCoef1 = clustCoef1_lcc, 
+                                clustCoef2 = clustCoef2_lcc,
+                                modularity1 = modul1_lcc, 
+                                modularity2 = modul2_lcc)
   )
   
   return(output)

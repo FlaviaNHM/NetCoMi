@@ -25,8 +25,12 @@ permtest_diff_asso(
   verbose = TRUE,
   logFile = "log.txt",
   seed = NULL,
-  assoPerm = NULL,
-  storePermCounts = FALSE
+  fileLoadAssoPerm = NULL,
+  storeAssoPerm = FALSE,
+  fileStoreAssoPerm = "assoPerm",
+  storeCountsPerm = FALSE,
+  fileStoreCountsPerm = c("countsPerm1", "countsPerm2"),
+  assoPerm = NULL
 )
 }
 \arguments{
@@ -91,8 +95,7 @@ iteration number is stored}
 
 \item{seed}{an optional seed for reproducibility of the results}
 
-\item{assoPerm}{list with two elements containing permutation association
-matrices for the two groups.}
+\item{assoPerm}{not used anymore.}
 }
 \description{
 The function implements procedures to test whether pairs of taxa

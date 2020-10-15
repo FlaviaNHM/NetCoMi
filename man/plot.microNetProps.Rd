@@ -169,7 +169,7 @@ Necessary parameters (e.g. "x") are given via the argument
 
 \item{rmSingles}{character value indicating how to handle unconnected nodes.
 Possible values are \code{"all"} (all single nodes are deleted),
-\code{"inBoth"} (only nodes that are unconnected in both networks are
+\code{"inboth"} (only nodes that are unconnected in both networks are
 removed) or \code{"none"} (default; no nodes are removed). Cannot be set to
 \code{"all"}, if the same layout is used for both networks.}
 

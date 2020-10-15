@@ -8,9 +8,10 @@ calc_props(
   adjaMat,
   dissMat,
   assoMat,
-  sPathDisconnected,
   sPathNorm,
   sPathAlgo,
+  connectivity,
+  normNatConnect,
   weighted,
   isempty,
   clustMethod,
@@ -18,12 +19,12 @@ calc_props(
   hubPar,
   hubQuant,
   lnormFit,
-  connectivity,
   weightDeg,
   normDeg,
   normBetw,
   normClose,
   normEigen,
+  centrLCC,
   jaccard = FALSE,
   jaccQuant = NULL
 )
@@ -35,13 +36,14 @@ calc_props(
 
 \item{assoMat}{association matrix}
 
-\item{sPathDisconnected}{indicates how to handle disconnected components}
-
 \item{sPathNorm}{logical. If TRUE, shortest paths are normalized by 
 average dissimilarity.}
 
 \item{sPathAlgo}{character indicating the algorithm used for shortest path
 calculation.}
+
+\item{connectivity}{logical indicating whether edge and vertex connectivity 
+should be calculated. Might be disabled to reduce execution time.}
 
 \item{weighted}{indicated whether the network is weighted}
 
@@ -61,9 +63,6 @@ for identifying hub nodes. Possible values are \code{degree},
 quantile of the fitted log-normal distribution (if \code{lnormFit = TRUE})
 or of the empirical distribution of centrality values.}
 
-\item{connectivity}{logical indicating whether edge and vertex connectivity 
-should be calculated. Might be disabled to reduce execution time.}
-
 \item{weightDeg}{if \code{TRUE}, the weighted degree is used.}
 
 \item{normDeg, normBetw, normClose, normEigen}{if \code{TRUE}, a normalized
@@ -73,6 +72,8 @@ centralities are normalized.}
 \item{jaccard}{shall the Jaccard index be calculated?}
 
 \item{jaccQuant}{quantile for the Jaccard index}
+
+\item{sPathDisconnected}{indicates how to handle disconnected components}
 }
 \description{
 Calculates network properterties for a given adjacency matrix

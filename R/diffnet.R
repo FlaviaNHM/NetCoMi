@@ -168,7 +168,13 @@ diffnet <- function(x, diffMethod = "permute", discordThresh = 0.8,
                     cores = 1L, verbose = TRUE, logFile = NULL,
                     seed = NULL, alpha = 0.05, adjust = "lfdr",
                     lfdrThresh = 0.2, trueNullMethod = "convest",
-                    pvalsVec = NULL, assoPerm = NULL, storePermCounts = FALSE){
+                    pvalsVec = NULL,                            
+                    fileLoadAssoPerm  = NULL,
+                    storeAssoPerm = FALSE,
+                    fileStoreAssoPerm = "assoPerm",
+                    storeCountsPerm = FALSE,
+                    fileStoreCountsPerm = c("countsPerm1", "countsPerm2"), 
+                    assoPerm = NULL){
 
   stopifnot(class(x) == "microNet")
 
@@ -288,19 +294,16 @@ diffnet <- function(x, diffMethod = "permute", discordThresh = 0.8,
                                        verbose = verbose, nPerm = nPerm,
                                        matchDesign = matchDesign,
                                        cores = cores, logFile = logFile,
-                                       seed = seed, assoPerm = assoPerm,
-                                       storePermCounts = storePermCounts)
+                                       seed = seed, 
+                                       fileLoadAssoPerm = fileLoadAssoPerm,
+                                       storeAssoPerm = storeAssoPerm,
+                                       fileStoreAssoPerm = fileStoreAssoPerm,
+                                       storeCountsPerm = storeCountsPerm,
+                                       fileStoreCountsPerm = fileStoreCountsPerm,
+                                       assoPerm = assoPerm)
 
       pvalsVec <- permResult$pvalsVec
       pAdjust <- permResult$pAdjustVec
-
-      assoPerm1 <- permResult$assoPerm1
-      assoPerm2 <- permResult$assoPerm2
-      
-      if(storePermCounts){
-        countsPerm1 <- permResult$countsPerm1
-        countsPerm2 <- permResult$countsPerm2
-      }
 
       nExceedsVec <- permResult$nExceedsVec
 
@@ -315,7 +318,7 @@ diffnet <- function(x, diffMethod = "permute", discordThresh = 0.8,
                             trueNullMethod = trueNullMethod, verbose = verbose)
       if(verbose & adjust != "none") message("Done.")
 
-      assoPerm1 <- assoPerm2 <- nExceedsVec <- NULL
+      nExceedsVec <- NULL
     }
 
     output = list(assoMat1 = assoMat1, assoMat2 = assoMat2)
@@ -339,14 +342,6 @@ diffnet <- function(x, diffMethod = "permute", discordThresh = 0.8,
     diffMat[upper.tri(diffMat)] <- t(diffMat)[upper.tri(t(diffMat))]
 
     output[["diffMat"]] <- diffMat
-
-    output[["assoPerm"]] <- list(assoPerm1 = assoPerm1, assoPerm2 = assoPerm2)
-    
-    if(storePermCounts){
-      output[["countsPerm"]] <- list(countsPerm1 = countsPerm1, 
-                                     countsPerm2 = countsPerm2)
-    }
-
 
   }else{ #Fisher's z-test
 

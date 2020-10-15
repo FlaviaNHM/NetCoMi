@@ -354,6 +354,7 @@
 #' @method plot microNetProps
 #' @export
 plot.microNetProps <- function(x,
+                               plotdiss = FALSE,
                                layout = "spring",
                                sameLayout = FALSE,
                                layoutGroup = NULL,
@@ -562,6 +563,10 @@ plot.microNetProps <- function(x,
   if(nodeColor == "cluster"){
 
     if(!is.null(colorVec)){
+      if(is.list(colorVec)){
+        stop("'colorVec' must be a vector if clusters are used for node colors.
+             Set 'sameColThresh' to a high value for different colors in the two networks.")
+      }
       stopifnot(is.vector(colorVec))
     }
 
@@ -1174,7 +1179,14 @@ plot.microNetProps <- function(x,
 
   #==========================================================================
   ### plot network(s)
-
+  if(plotdiss){
+  adja1 <- 1-adja1
+  adja1[adja1 == 1] <- 0
+  
+  adja2 <- 1-adja2
+  adja2[adja2 == 1] <- 0
+  }
+  
   if(twoNets){
       par(mfrow = c(1,2))
 

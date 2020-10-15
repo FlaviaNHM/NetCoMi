@@ -6,9 +6,10 @@
 \usage{
 netAnalyze(
   net,
+  centrLCC = TRUE,
   sPathAlgo = "dijkstra",
   sPathNorm = TRUE,
-  sPathDisconnected = "maxPath",
+  normNatConnect = TRUE,
   connectivity = TRUE,
   clustMethod = NULL,
   clustPar = NULL,
@@ -28,6 +29,10 @@ netAnalyze(
 \item{net}{object of class \code{microNet} inheriting from a call to
 \code{\link{netConstruct}}}
 
+\item{centrLCC}{logical indicating whether centralities should only be 
+computed for the largest connected component (LCC). If \code{TRUE} 
+(default), centrality values for disconnected components are zero.}
+
 \item{sPathAlgo}{character indicating the algorithm used for computing
 the shortest paths between all node pairs. \code{\link[igraph]{distances}} 
 is used for shortest path calculation. Possible values are: "unweighted", 
@@ -41,21 +46,8 @@ That means, a path is interpreted as steps with average dissimilarity.
 If \code{FALSE}, the shortest path is the minimum sum of dissimilarities 
 between two nodes.}
 
-\item{sPathDisconnected}{character indicating how to handle disconnected 
-components. A component (single node or subnetwork) is disconnected if 
-there is no path between the component and all other nodes in the network.
-Possible options are:
-\describe{
-\item{\code{"infinity"}}{Shortest paths between unconnected nodes are set
-to infinity and thus ignored in average shortest path and closeness 
-centrality calculation. As a consequence, a highly connected network may 
-have a higher average path length than a less connected network.}
-\item{\code{"maxPath"}}{Default. The shortest path length (unnormalized) 
-between unconnected components is set to the number of nodes (N) and 
-thus longer than the maximum possible path length. In unweighted
-networks, the maximum path length is N-1, and in weighted networks (N-1)*1, 
-since the highest possible dissimilarity is one.}
-}}
+\item{normNatConnect}{logical indicating whether the normalized natural 
+connectivity should be returned. Defaults to \code{TRUE}.}
 
 \item{connectivity}{logical indicating whether edge and vertex connectivity 
 should be calculated. Might be disabled to reduce execution time.}

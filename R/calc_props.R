@@ -35,108 +35,75 @@
 #' @importFrom stats hclust as.dist cutree qlnorm quantile
 
 
-calc_props <- function(adjaMat, dissMat, assoMat, sPathDisconnected,
-                       sPathNorm, sPathAlgo, weighted, isempty, clustMethod, 
-                       clustPar, hubPar, hubQuant, lnormFit, connectivity,
+calc_props <- function(adjaMat, dissMat, assoMat, sPathNorm, sPathAlgo,
+                       connectivity, normNatConnect, weighted, isempty, 
+                       clustMethod, clustPar, hubPar, hubQuant, lnormFit, 
                        weightDeg, normDeg, normBetw, normClose, normEigen,
-                       jaccard = FALSE, jaccQuant = NULL){
+                       centrLCC, jaccard = FALSE, jaccQuant = NULL){
   
   if(isempty){
     output <- list(clust = NULL, tree = NULL, deg = 0, deg_unnorm = 0,
                    betw = 0, betw_unnorm = 0, close = 0, close_unnorm = 0,
-                   eigen = 0, eigen_unnorm = 0, lcSize = 0,
-                   avDiss = 0, avDiss_lc = 0, avPath = 0, avPath_lc = 0,
-                   vertconnect = 0, vertconnect_lc = 0, edgeconnect = 0, 
-                   edgeconnect_lc = 0, clustCoef = 0, clustCoef_lc = 0,
-                   density = 0, density_lc = 0, modul = 0, modul_lc = 0,
-                   pnRatio = 0, pnRatio_lc = 0,  hubs = NULL, topdeg = NULL, 
+                   eigen = 0, eigen_unnorm = 0, lccSize = 0,
+                   avDiss = 0, avDiss_lcc = 0, avPath = 0, avPath_lcc = 0,
+                   vertconnect = 0, vertconnect_lcc = 0, edgeconnect = 0, 
+                   edgeconnect_lcc = 0, clustCoef = 0, clustCoef_lcc = 0,
+                   density = 0, density_lcc = 0, modul = 0, modul_lcc = 0,
+                   pnRatio = 0, pnRatio_lcc = 0,  hubs = NULL, topdeg = NULL, 
                    topbetw = NULL, topclose = NULL, topeigen = NULL)
     return(output)
   }
-
-  #== create igraph objects and decompose graph ================================
-  # create graph from adjacency matrix
-
+  
+  #== Create igraph objects and decompose graph ================================
+  # Create graph from adjacency matrix
   net <- igraph::graph_from_adjacency_matrix(adjaMat, weighted=T,
                                              mode="undirected", diag=F)
   
   dg_net <- decompose.graph(net)
+  nComp <- length(dg_net)
+  nNodes <- ncol(adjaMat)
   
-  # graph with only the largest component
-  net_lc <- dg_net[[1]]
-  lcSize <- length(V(net_lc))
+  # Largest connected component (LCC)
+  net_lcc <- dg_net[[1]]
+  lccSize <- length(V(net_lcc))
+  lccSizeRel <- lccSize / nNodes
+
+  # Adjacency of the LCC
+  adjaMat_lcc <- as.matrix(as_adjacency_matrix(net_lcc, attr="weight"))
+  diag(adjaMat_lcc) <- 1
   
-  # adjacency of largest component
-  adjaMat_lc <- as.matrix(as_adjacency_matrix(net_lc, attr="weight"))
-  
+  # Names of nodes in the LCC
+  lccNames <- colnames(adjaMat_lcc)
   
   if(!weighted){
     dissMat[!is.infinite(dissMat)] <- 1
     diag(dissMat) <- 0
   }
   
-  # dissimilarity of the largest component
-  dissMat_lc <- dissMat[rownames(adjaMat_lc), colnames(adjaMat_lc)]
+  # Dissimilarity of the LCC
+  dissMat_lcc <- dissMat[lccNames, lccNames]
   
-  #== graph objects of dissimilarity matrices ==================================
+  #== Graph objects of dissimilarity matrices ==================================
   
   dissMatnoInf <- dissMat
   dissMatnoInf[is.infinite(dissMatnoInf)] <- 0
   
-  dissMatnoInf_lc <- dissMat_lc
-  dissMatnoInf_lc[is.infinite(dissMatnoInf_lc)] <- 0
+  dissMatnoInf_lcc <- dissMat_lcc
+  dissMatnoInf_lcc[is.infinite(dissMatnoInf_lcc)] <- 0
   
-  # whole network
+  # Whole network
   dissnet <- igraph::graph_from_adjacency_matrix(dissMatnoInf, 
                                                  weighted=T,
                                                  mode="undirected", 
                                                  diag=F)
   
-  # largest component
-  #dissMatEdit_lc <- dissMatEdit[rownames(adjaMat_lc), colnames(adjaMat_lc)]
-  
-  dissnet_lc <- igraph::graph_from_adjacency_matrix(dissMatnoInf_lc, 
+  # LCC
+  dissnet_lcc <- igraph::graph_from_adjacency_matrix(dissMatnoInf_lcc, 
                                                     weighted=T,
                                                     mode="undirected", 
                                                     diag=F)
   
-  
-  #== shortest paths ===========================================================
-  
-  # whole network
-  sPath <- distances(dissnet, algorithm = sPathAlgo)
-  # largest component
-  sPath_lc <- distances(dissnet_lc, algorithm = sPathAlgo)
-  
-  nNodes <- ncol(adjaMat)
-  
-  if(sPathDisconnected == "maxPath"){
-    sPath[is.infinite(sPath)] <- nNodes
-  }
-
-  #== average dissimilarity/distance ===========================================
-
-  if(weighted){
-    dissVec <- dissMat[lower.tri(dissMat)]
-    dissVec_lc <- dissMat_lc[lower.tri(dissMat_lc)]
-    
-    dissVec[is.infinite(dissVec)] <- NA
-    dissVec_lc[is.infinite(dissVec_lc)] <- NA
-    
-    ### average dissimilarity
-    avDiss <- mean(dissVec, na.rm = TRUE)
-    avDiss_lc <- mean(dissVec_lc, na.rm = TRUE)
-    
-    # "normalized" shortest paths (steps with average dissimilarity)
-    if(sPathNorm){
-      sPath <- sPath / avDiss
-      sPath_lc <- sPath_lc / avDiss_lc
-    }
-  } else{
-    avDiss <- avDiss_lc <- 1
-  }
-
-  #== clustering ============================================================
+  #== Clustering ============================================================
 
   clust <- NULL
   tree <- NULL
@@ -178,48 +145,223 @@ calc_props <- function(adjaMat, dissMat, assoMat, sPathDisconnected,
 
   }
   
-  # largest component
-  clust_lc <- clust[colnames(adjaMat_lc)]
+  # LCC
+  clust_lcc <- clust[lccNames]
+  
+  #== Shortest paths ===========================================================
+  
+  # Whole network
+  sPath <- distances(dissnet, algorithm = sPathAlgo)
+  
+  # LCC
+  sPath_lcc <- distances(dissnet_lcc, algorithm = sPathAlgo)
 
-  #== centrality measures ===================================================
+  #== Average dissimilarity/distance ===========================================
+  
+  if(weighted){
+    dissVec <- dissMat[lower.tri(dissMat)]
+    dissVec[is.infinite(dissVec)] <- NA
+    
+    dissVec_lcc <- dissMat_lcc[lower.tri(dissMat_lcc)]
+    dissVec_lcc[is.infinite(dissVec_lcc)] <- NA
+    
+    ### average dissimilarity
+    avDiss <- mean(dissVec, na.rm = TRUE)
+    avDiss_lcc <- mean(dissVec_lcc, na.rm = TRUE)
+
+    # "normalized" shortest paths (units with average dissimilarity)
+    if(sPathNorm){
+      sPath <- sPath / avDiss
+      sPath_lcc <- sPath_lcc / avDiss_lcc
+    }
+  } else{
+    avDiss <- avDiss_lcc <- 1
+  }
+
+  #== global network properties ================================================
+
+  ### Average shortest path length 
+  
+  sPathVec <- sPath[lower.tri(sPath)]
+  sPathVec[is.infinite(sPathVec)] <- NA
+  avPath <- mean(sPathVec, na.rm = TRUE)
+  if(is.na(avPath)) avPath <- 0
+
+  sPathVec_lcc <- sPath_lcc[lower.tri(sPath_lcc)]
+  avPath_lcc <- mean(sPathVec_lcc, na.rm = TRUE)
+  if(is.na(avPath_lcc)) avPath_lcc <- 0
+  
+  #-------------------------------
+  ### Connectivity 
+  
+  if(connectivity){
+    # vertex connectivity
+    vertconnect <- vertex_connectivity(net)
+    vertconnect_lcc <- vertex_connectivity(net_lcc)
+    
+    # edge connectivity
+    edgeconnect <- edge_connectivity(net)
+    edgeconnect_lcc <- edge_connectivity(net_lcc)
+  } else{
+    vertconnect <- vertconnect_lcc <- NA
+    edgeconnect <- edgeconnect_lcc <- NA
+  }
+  
+  #-------------------------------
+  ### Natural connectivity
+
+  natConnect <- pulsar::natural.connectivity(adjaMat, norm = normNatConnect)
+  natConnect_lcc <- pulsar::natural.connectivity(adjaMat_lcc,
+                                                 norm = normNatConnect)
+  
+  #-------------------------------
+  ### Clustering coefficient
+  
+  # Complete network
+  clustCoef <- transitivity(net, type = "global")
+  if(is.na(clustCoef)) clustCoef <- 0
+  
+  # LCC
+  clustCoef_lcc <- transitivity(net_lcc, type = "global")
+  if(is.na(clustCoef_lcc)) clustCoef_lcc <- 0
+  
+  #-------------------------------
+  ### Modularity
+  
+  # Complete network
+  if(clustMethod != "none"){
+    modul <- modularity(net, (clust+1))
+  } else{
+    modul <- NA
+  }
+  
+  # LCC
+  if(clustMethod != "none"){
+    modul_lcc <- modularity(net_lcc, (clust_lcc+1))
+  } else{
+    modul_lcc <- NA
+  }
+  
+  #-------------------------------
+  ### Density (relative number of edges)
+  density <- edge_density(net)
+  density_lcc <- edge_density(net_lcc)
+  
+  #-------------------------------
+  ### Ratio of positive to negative associations
+
+  # Complete network
+  if(is.null(assoMat)){ # no negative dissimilarities possible
+    pnRatio <- 1
+    pnRatio_lcc <- 1
+    
+  } else{
+    posAsso <- sum(assoMat[lower.tri(assoMat)] > 0)
+    negAsso <- sum(assoMat[lower.tri(assoMat)] < 0)
+    pnRatio <- posAsso / negAsso
+    if(is.infinite(pnRatio) || is.nan(pnRatio)){
+      pnRatio <- posAsso
+    }
+    
+    # LCC
+    assoMat_lcc <- assoMat[rownames(dissMat_lcc), colnames(dissMat_lcc)]
+    posAsso <- sum(assoMat_lcc[lower.tri(assoMat_lcc)] > 0)
+    negAsso <- sum(assoMat_lcc[lower.tri(assoMat_lcc)] < 0)
+    pnRatio_lcc <- posAsso / negAsso
+    if(is.infinite(pnRatio_lcc) || is.nan(pnRatio_lcc)){
+      pnRatio_lcc <- posAsso
+    }
+  }
+
+  #== Centrality measures ===================================================
 
   ### degree
   if(weightDeg){
     deg <- deg_unnorm <- strength(net)
+    deg_lcc <- strength(net_lcc)
 
   } else{
     deg <- degree(net, normalized = normDeg)
     deg_unnorm <- degree(net)
   }
+  
+  if(centrLCC){
+    deg[!names(deg) %in% lccNames] <- 0
+    deg_unnorm[!names(deg_unnorm) %in% lccNames] <- 0
+  }
 
   #-------------------------------
   ### betweenness centrality (based on distances)
 
-  betw <- betweenness(dissnet, normalized = normBetw)
-  betw_unnorm <- betweenness(dissnet)
+  if(centrLCC){
+    betw <- betw_unnorm <- rep(0, ncol(adjaMat))
+    names(betw) <- names(betw_unnorm) <- colnames(adjaMat)
+    
+    betw.tmp <- betweenness(dissnet_lcc, normalized = normBetw)
+    betw_unnorm.tmp <- betweenness(dissnet_lcc)
+    
+    betw[names(betw.tmp)] <- betw.tmp
+    betw_unnorm[names(betw_unnorm.tmp)] <- betw_unnorm.tmp
+    
+  } else{
+    betw <- betweenness(dissnet, normalized = normBetw)
+    betw_unnorm <- betweenness(dissnet)
+  }
+  
+  betw[is.nan(betw)] <- 0
+  betw_unnorm[is.nan(betw_unnorm)] <- 0
 
   #-------------------------------
   ### closeness centrality (based on distances)
 
-  sPath_rev <- 1/sPath
-  diag(sPath_rev) <- NA
-
-  close_unnorm <- sapply(1:nrow(sPath_rev), function(i){
-    sum(sPath_rev[i,], na.rm = TRUE)
-  })
-  names(close_unnorm) <- colnames(adjaMat)
-
-  if(normClose){
-    # normalize closeness by n-1 
-    close <- close_unnorm / (nNodes - 1)
+  if(centrLCC){
+    close_unnorm <- rep(0, ncol(adjaMat))
+    names(close_unnorm) <- colnames(adjaMat)
+    
+    sPath_rev <- 1/sPath_lcc
+    diag(sPath_rev) <- NA
+    
+    close_unnorm.tmp <- sapply(1:nrow(sPath_rev), function(i){
+      sum(sPath_rev[i,], na.rm = TRUE)
+    })
+    names(close_unnorm.tmp) <- lccNames
+    close_unnorm[lccNames] <- close_unnorm.tmp
+    
+    if(normClose){
+      # normalize closeness by n-1 
+      close <- close_unnorm / (lccSize - 1)
+    } else{
+      close <- close_unnorm
+    }
+    
   } else{
-    close <- close_unnorm
+    #if(nComp > 1 && sPathNorm){
+      #warning("Normalized shortest paths depend on average dissimilarity, which
+      #may be biased because infinite paths between unconnected nodes are ignored. 
+      #Hence, closeness centrality may also be biased and should either be based 
+      #on non-normalized shortest paths or be computed only for the LCC.")
+    #}
+    
+    sPath_rev <- 1/sPath
+    diag(sPath_rev) <- NA
+    
+    close_unnorm <- sapply(1:nrow(sPath_rev), function(i){
+      sum(sPath_rev[i,], na.rm = TRUE)
+    })
+    names(close_unnorm) <- colnames(adjaMat)
+    
+    if(normClose){
+      # normalize closeness by n-1 
+      close <- close_unnorm / (nNodes - 1)
+    } else{
+      close <- close_unnorm
+    }
   }
 
   #-------------------------------
   ### Eigenvector centrality
 
-  if(length(dg_net) > 1){
+  if(nComp > 1 && !centrLCC){
     dgcount <- unlist(lapply(dg_net, vcount))
     dgcount[dgcount == 1] <- 0
     vnumb <- sum(unlist(dgcount))
@@ -238,87 +380,20 @@ calc_props <- function(adjaMat, dissMat, assoMat, sPathDisconnected,
     }
 
   } else{
-    eigen <- eigen_centrality(net, scale = normEigen)$vector
-    eigen_unnorm <- eigen_centrality(net, scale = FALSE)$vector
-  }
-
-  #== global network properties ================================================
-
-  ### average shortest path length
-  # complete network
-  sPathVec <- sPath[lower.tri(sPath)]
-  sPathVec[is.infinite(sPathVec)] <- NA
-  avPath <- mean(sPathVec, na.rm = TRUE)
-  if(is.na(avPath)) avPath <- 0
-  
-  # largest component
-  sPathVec_lc <- sPath_lc[lower.tri(sPath_lc)]
-  avPath_lc <- mean(sPathVec_lc, na.rm = TRUE)
-  if(is.na(avPath_lc)) avPath_lc <- 0
-
-  #-------------------------------
-  # connectivity
-  
-  if(connectivity){
-    # vertex connectivity
-    vertconnect <- vertex_connectivity(net)
-    vertconnect_lc <- vertex_connectivity(net_lc)
     
-    # edge connectivity
-    edgeconnect <- edge_connectivity(net)
-    edgeconnect_lc <- edge_connectivity(net_lc)
+    eigen.tmp <- eigen_centrality(net_lcc, scale = normEigen)$vector
+    eigen_unnorm.tmp <- eigen_centrality(net_lcc, scale = FALSE)$vector
     
-  } else{
-    vertconnect <- NA
-    vertconnect_lc <- NA
-    edgeconnect <- NA
-    edgeconnect_lc <- NA
+    if(nComp > 1){
+      eigen <- eigen_unnorm <- numeric(nNodes)
+      names(eigen) <- names(eigen_unnorm) <- colnames(adjaMat)
+      eigen[names(eigen.tmp)] <- eigen.tmp
+      eigen_unnorm[names(eigen_unnorm.tmp)] <- eigen_unnorm.tmp
+    } else{
+      eigen <- eigen.tmp
+      eigen_unnorm <- eigen_unnorm.tmp
+    }
   }
-  
-  #-------------------------------
-  ### clustering coefficient
-  # complete network
-  clustCoef <- transitivity(net, type = "global")
-  if(is.na(clustCoef)) clustCoef <- 0
-  
-  # largest component
-  clustCoef_lc <- transitivity(net_lc, type = "global")
-  if(is.na(clustCoef_lc)) clustCoef_lc <- 0
-
-  #-------------------------------
-  ### modularity
-  
-  # complete network
-  if(clustMethod != "none"){
-    modul <- modularity(net, (clust+1))
-  } else{
-    modul <- NA
-  }
-  
-  # largest component
-  if(clustMethod != "none"){
-    modul_lc <- modularity(net_lc, (clust_lc+1))
-  } else{
-    modul_lc <- NA
-  }
-  
-  #-------------------------------
-  ### density (relative number of edges)
-  density <- edge_density(net)
-  density_lc <- edge_density(net_lc)
-
-  #-------------------------------
-  ### ratio of positive to negative associations
-  # complete network
-  posAsso <- sum(assoMat[lower.tri(assoMat)] > 0)
-  negAsso <- sum(assoMat[lower.tri(assoMat)] < 0)
-  pnRatio <- posAsso / negAsso
-  
-  # complete network
-  assoMat_lc <- assoMat[rownames(dissMat_lc), colnames(dissMat_lc)]
-  posAsso <- sum(assoMat_lc[lower.tri(assoMat_lc)] > 0)
-  negAsso <- sum(assoMat_lc[lower.tri(assoMat_lc)] < 0)
-  pnRatio_lc <- posAsso / negAsso
 
   #== hubs and Jaccard index ================================================
 
@@ -422,20 +497,21 @@ calc_props <- function(adjaMat, dissMat, assoMat, sPathDisconnected,
 
   #========================================================================
 
-  output <- list(clust = clust, tree = tree, 
+  output <- list(nComp = nComp, clust = clust, tree = tree, 
                  deg = deg, deg_unnorm = deg_unnorm,
                  betw = betw, betw_unnorm = betw_unnorm,
                  close = close, close_unnorm = close_unnorm,
                  eigen = eigen, eigen_unnorm = eigen_unnorm,
-                 lcSize = lcSize,
-                 avDiss = avDiss, avDiss_lc = avDiss_lc,
-                 avPath = avPath, avPath_lc = avPath_lc,
-                 vertconnect = vertconnect, vertconnect_lc = vertconnect_lc,
-                 edgeconnect = edgeconnect, edgeconnect_lc = edgeconnect_lc,
-                 clustCoef = clustCoef, clustCoef_lc = clustCoef_lc,
-                 density = density, density_lc = density_lc,
-                 modul = modul, modul_lc = modul_lc,
-                 pnRatio = pnRatio, pnRatio_lc = pnRatio_lc,
+                 lccSize = lccSize, lccSizeRel = lccSizeRel,
+                 avDiss = avDiss, avDiss_lcc = avDiss_lcc,
+                 avPath = avPath, avPath_lcc = avPath_lcc,
+                 vertconnect = vertconnect, vertconnect_lcc = vertconnect_lcc,
+                 edgeconnect = edgeconnect, edgeconnect_lcc = edgeconnect_lcc,
+                 natConnect = natConnect, natConnect_lcc = natConnect_lcc,
+                 clustCoef = clustCoef, clustCoef_lcc = clustCoef_lcc,
+                 density = density, density_lcc = density_lcc,
+                 modul = modul, modul_lcc = modul_lcc,
+                 pnRatio = pnRatio, pnRatio_lcc = pnRatio_lcc,
                  hubs = hubs, 
                  topdeg = topdeg, topbetw = topbetw, 
                  topclose = topclose, topeigen = topeigen)

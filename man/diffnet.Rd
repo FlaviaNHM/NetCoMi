@@ -20,8 +20,12 @@ diffnet(
   lfdrThresh = 0.2,
   trueNullMethod = "convest",
   pvalsVec = NULL,
-  assoPerm = NULL,
-  storePermCounts = FALSE
+  fileLoadAssoPerm = NULL,
+  storeAssoPerm = FALSE,
+  fileStoreAssoPerm = "assoPerm",
+  storeCountsPerm = FALSE,
+  fileStoreCountsPerm = c("countsPerm1", "countsPerm2"),
+  assoPerm = NULL
 )
 }
 \arguments{
