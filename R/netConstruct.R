@@ -864,7 +864,7 @@ netConstruct <- function(data,
       counts_orig1 <- countMatOrig1
       counts_orig2 <- countMat2
       attributes(counts_orig1)$scale <- "counts"
-      attributes(counts_orig1)$scale <- "counts"
+      attributes(counts_orig2)$scale <- "counts"
       
 
       # zero treatment
@@ -1147,7 +1147,7 @@ netConstruct <- function(data,
   output$dissScale2 <- dissScale2
 
   output$countMat1 <- counts_orig1
-  output$countMat2 <- counts_orig1
+  output$countMat2 <- counts_orig2
   output$normCounts1 <- counts1
   output$normCounts2 <- counts2
   output$groups <- groups

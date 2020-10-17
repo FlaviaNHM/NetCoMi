@@ -31,7 +31,7 @@
 #' @param jaccQuant quantile for the Jaccard index
 #'
 #'
-#' @importFrom igraph graph_from_adjacency_matrix
+#' @importFrom igraph graph_from_adjacency_matrix decompose.graph
 #' @importFrom stats hclust as.dist cutree qlnorm quantile
 
 
@@ -59,7 +59,7 @@ calc_props <- function(adjaMat, dissMat, assoMat, sPathNorm, sPathAlgo,
   net <- igraph::graph_from_adjacency_matrix(adjaMat, weighted=T,
                                              mode="undirected", diag=F)
   
-  dg_net <- decompose.graph(net)
+  dg_net <- igraph::decompose.graph(net)
   nComp <- length(dg_net)
   nNodes <- ncol(adjaMat)
   
