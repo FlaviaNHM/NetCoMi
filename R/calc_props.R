@@ -53,18 +53,20 @@ calc_props <- function(adjaMat, dissMat, assoMat, sPathNorm, sPathAlgo,
                    topbetw = NULL, topclose = NULL, topeigen = NULL)
     return(output)
   }
-  
+
   #== Create igraph objects and decompose graph ================================
   # Create graph from adjacency matrix
   net <- igraph::graph_from_adjacency_matrix(adjaMat, weighted=T,
                                              mode="undirected", diag=F)
   
-  dg_net <- igraph::decompose.graph(net)
+  dg_net <- igraph::decompose.graph(net, min.vertices=2)
   nComp <- length(dg_net)
   nNodes <- ncol(adjaMat)
   
   # Largest connected component (LCC)
-  net_lcc <- dg_net[[1]]
+  indLCC <- which.max(unlist(lapply(dg_net, function(x) length(V(x)))))
+  
+  net_lcc <- dg_net[[indLCC]]
   lccSize <- length(V(net_lcc))
   lccSizeRel <- lccSize / nNodes
 
