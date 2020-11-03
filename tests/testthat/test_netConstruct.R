@@ -121,7 +121,8 @@ context("netConstruct with different sparsification methods")
 sparsMethod <- c("none", "t-test", "bootstrap", "threshold", "softThreshold")
 
 for(i in 1:length(sparsMethod)){
-  context(sparsMethod[i])
+  #context(sparsMethod[i])
+  print(sparsMethod[i])
 
   testnet <- netConstruct(amgut1.filt,
                           filtTax = "highestVar",
@@ -168,7 +169,8 @@ for(i in 1:length(zeroMethod)){
 
 #===============================================================================
 context("netConstruct with different normalization methods")
-normMethod <- c("none", "fractions", "TSS", "CSS", "COM", "rarefy", "clr")
+normMethod <- c("none", "fractions", "TSS", #"CSS", 
+                "COM", "rarefy", "clr")
 zeroMethod <- c("none", "pseudo", "multRepl")
 
 for(i in 1:length(normMethod)){

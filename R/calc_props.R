@@ -107,8 +107,9 @@ calc_props <- function(adjaMat, dissMat, assoMat, sPathNorm, sPathAlgo,
   
   #== Clustering ============================================================
 
-  clust <- NULL
-  tree <- NULL
+  clust <- clust_lcc <- NULL
+  tree <- tree_lcc <- NULL
+  
   if(clustMethod != "none"){
     if(clustMethod == "hierarchical"){
 
@@ -118,13 +119,25 @@ calc_props <- function(adjaMat, dissMat, assoMat, sPathNorm, sPathAlgo,
 
       dissMat.tmp <- dissMat
       dissMat.tmp[is.infinite(dissMat.tmp)] <- 1
+      
+      dissMat_lcc.tmp <- dissMat_lcc
+      dissMat_lcc.tmp[is.infinite(dissMat_lcc.tmp)] <- 1
+      
       tree <- hclust(as.dist(dissMat.tmp), method = clustPar$method)
+      tree_lcc <- hclust(as.dist(dissMat_lcc.tmp), method = clustPar$method)
+      rm(dissMat.tmp, dissMat_lcc.tmp)
 
       if(is.null(clustPar$k) & is.null(clustPar$h)){
         clustPar$k <- 3
       }
-      clust <- do.call(cutree, list(tree = tree, k = clustPar$k, h = clustPar$h))
+      
+      clust <- do.call(cutree, list(tree = tree, k = clustPar$k, 
+                                    h = clustPar$h))
+      clust_lcc <- do.call(cutree, list(tree = tree_lcc, k = clustPar$k, 
+                                        h = clustPar$h))
+      
       names(clust) <- rownames(adjaMat)
+      names(clust_lcc) <- rownames(adjaMat_lcc)
 
     } else{
 
@@ -138,17 +151,20 @@ calc_props <- function(adjaMat, dissMat, assoMat, sPathNorm, sPathAlgo,
 
       clust <- clustres$membership
       names(clust) <- clustres$names
-
-      cltab <- table(clust)
-
-      # cluster 0 assigned to elements in a cluster with only one element
-      clust[clust %in% which(cltab == 1)] <- 0
+      
+      # LCC
+      clust_lcc <- clust[lccNames]
     }
 
+    cltab <- table(clust)
+    cltab_lcc <- table(clust_lcc)
+    
+    # cluster 0 assigned to elements in a cluster with only one element
+    clust[clust %in% which(cltab == 1)] <- 0
+    clust_lcc[clust_lcc %in% which(cltab_lcc == 1)] <- 0
   }
   
-  # LCC
-  clust_lcc <- clust[lccNames]
+
   
   #== Shortest paths ===========================================================
   
@@ -499,7 +515,9 @@ calc_props <- function(adjaMat, dissMat, assoMat, sPathNorm, sPathAlgo,
 
   #========================================================================
 
-  output <- list(nComp = nComp, clust = clust, tree = tree, 
+  output <- list(nComp = nComp, lccNames = lccNames,
+                 clust = clust, tree = tree, 
+                 clust_lcc = clust_lcc, tree_lcc = tree_lcc,
                  deg = deg, deg_unnorm = deg_unnorm,
                  betw = betw, betw_unnorm = betw_unnorm,
                  close = close, close_unnorm = close_unnorm,
