@@ -96,11 +96,12 @@
 #' @param groupsChanged logical. Indicates the order in which the networks are
 #'   plotted. If \code{TRUE}, the order is exchanged. See details. Defaults to
 #'   \code{FALSE}.
-#' @param labels defines the node labels. Can be a character vector, which is
-#'   used for both groups (then, the adjacency matrices in \code{x} must contain
-#'   the same variables). Can also be list with two vectors. If \code{FALSE}, no
-#'   labels are plotted. Defaults to the row/column names of the adjacency
-#'   matrices.
+#' @param labels defines the node labels. Can be a named character vector, which 
+#'   is used for both groups (then, the adjacency matrices in \code{x} must 
+#'   contain the same variables). 
+#'   Can also be list with two named vectors (names must match the row/column 
+#'   names of the adjacency matrices). If \code{FALSE}, no labels are plotted. 
+#'   Defaults to the row/column names of the adjacency matrices.
 #' @param shortenLabels options to shorten node labels. Ignored if node labels
 #'   are defined via \code{labels}. Possible options are:
 #'   \describe{
@@ -275,7 +276,8 @@
 #'   second for edges with absolute weight above \code{cut}. If a single value
 #'   is given, it is used for both cases. Ignored if \code{colorNegAsso} is
 #'   \code{FALSE}. Defaults to \code{c("red", "#BF0000")}.
-#' @param cut defines the \code{"cut"} parameter of \code{\link[qgraph]{qgraph}}. Can
+#' @param cut defines the \code{"cut"} parameter of 
+#'   \code{\link[qgraph]{qgraph}}. Can
 #'   be either a numeric value (is used for both groups if two networks are
 #'   plotted) or vector of length two. The default is set analogous to that in
 #'   \code{\link[qgraph]{qgraph}}: "0 for graphs with less then 20 nodes. For
@@ -362,7 +364,7 @@ plot.microNetProps <- function(x,
                                groupNames = NULL,
                                groupsChanged = FALSE,
                                labels = NULL,
-                               shortenLabels = "intelligent",
+                               shortenLabels = "none",
                                labelLength = 6L,
                                labelPattern = c(5,"'",3),
                                charToRm = NULL,
@@ -449,15 +451,13 @@ plot.microNetProps <- function(x,
   adja1 <- filter_edges(adja = adja1_orig, edgeFilter = edgeFilter,
                             edgeFilterPar = edgeFilterPar)
 
-  adja1List <- filter_nodes(adja = adja1, nodeFilter = nodeFilter,
+  keep1 <- filter_nodes(adja = adja1, nodeFilter = nodeFilter,
                            nodeFilterPar = nodeFilterPar, layout = layout,
                            degree = x$centralities$degree1,
                            between = x$centralities$between1,
                            close = x$centralities$close1,
                            eigen = x$centralities$eigenv1,
                            cluster = x$clustering$clust1)
-  adja1 <- adja1List$adja
-  keep1 <- adja1List$keep
 
   if(twoNets){
     adja2_orig <- x$input$adjaMat2
@@ -465,15 +465,13 @@ plot.microNetProps <- function(x,
     adja2 <- filter_edges(adja = adja2_orig, edgeFilter = edgeFilter,
                          edgeFilterPar = edgeFilterPar)
 
-    adja2List <- filter_nodes(adja = adja2_orig, nodeFilter = nodeFilter,
+    keep2 <- filter_nodes(adja = adja2_orig, nodeFilter = nodeFilter,
                              nodeFilterPar = nodeFilterPar, layout = layout,
                              degree = x$centralities$degree2,
                              between = x$centralities$between2,
                              close = x$centralities$close2,
                              eigen = x$centralities$eigenv2,
                              cluster = x$clustering$clust2)
-    adja2 <- adja2List$adja
-    keep2 <- adja2List$keep
 
     if(length(keep1) == 0 & length(keep2) == 0){
       stop("No nodes remaining in both networks after node filtering.")
@@ -1009,13 +1007,18 @@ plot.microNetProps <- function(x,
     
   } else if(is.logical(labels)){
     labels1 <- labels
+    
   } else if(is.list(labels)){
-    labels1 <- labels[[1]][1:ncol(adja1)]
+    stopifnot(all(colnames(adja1) %in% names(labels[[1]])))
+    labels1 <- labels[[1]][colnames(adja1)]
+    
   } else if(is.vector(labels)){
-    labels1 <- labels[1:ncol(adja1)]
+    stopifnot(all(colnames(adja1) %in% names(labels)))
+    labels1 <- labels[colnames(adja1)]
+    
   } else{
-    stop("Argument 'labels' must be either a vector with a label for each node,
-         or a list of length 2 naming the nodes in each network.")
+    stop("Argument 'labels' must be either a named vector with a label for each 
+         node, or a list of length 2 naming the nodes in each network.")
   }
   
 
@@ -1095,10 +1098,14 @@ plot.microNetProps <- function(x,
 
     } else if(is.logical(labels)){
       labels2 <- labels
+      
     } else if(is.list(labels)){
-      labels2 <- labels[[2]][1:ncol(adja2)]
+      stopifnot(all(colnames(adja2) %in% names(labels[[2]])))
+      labels2 <- labels[[2]][colnames(adja2)]
+      
     } else if(is.vector(labels)){
-      labels2 <- labels[1:ncol(adja2)]
+      stopifnot(all(colnames(adja2) %in% names(labels)))
+      labels2 <- labels[colnames(adja2)]
     }
 
     # store label names to file
