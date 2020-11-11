@@ -379,7 +379,7 @@ calc_props <- function(adjaMat, dissMat, assoMat, sPathNorm, sPathAlgo,
   #-------------------------------
   ### Eigenvector centrality
 
-  if(nComp > 1 && !centrLCC){
+  if(!centrLCC){
     dgcount <- unlist(lapply(dg_net, vcount))
     dgcount[dgcount == 1] <- 0
     vnumb <- sum(unlist(dgcount))
@@ -402,15 +402,11 @@ calc_props <- function(adjaMat, dissMat, assoMat, sPathNorm, sPathAlgo,
     eigen.tmp <- eigen_centrality(net_lcc, scale = normEigen)$vector
     eigen_unnorm.tmp <- eigen_centrality(net_lcc, scale = FALSE)$vector
     
-    if(nComp > 1){
-      eigen <- eigen_unnorm <- numeric(nNodes)
-      names(eigen) <- names(eigen_unnorm) <- colnames(adjaMat)
-      eigen[names(eigen.tmp)] <- eigen.tmp
-      eigen_unnorm[names(eigen_unnorm.tmp)] <- eigen_unnorm.tmp
-    } else{
-      eigen <- eigen.tmp
-      eigen_unnorm <- eigen_unnorm.tmp
-    }
+    eigen <- eigen_unnorm <- numeric(nNodes)
+    names(eigen) <- names(eigen_unnorm) <- colnames(adjaMat)
+    eigen[names(eigen.tmp)] <- eigen.tmp
+    eigen_unnorm[names(eigen_unnorm.tmp)] <- eigen_unnorm.tmp
+
   }
 
   #== hubs and Jaccard index ================================================

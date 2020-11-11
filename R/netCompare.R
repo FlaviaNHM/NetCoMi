@@ -417,6 +417,9 @@ netCompare <- function(x,
       }
       
     }
+    
+    perm_group_mat <- perm_group_mat[1:nPerm, ]
+    
     #---------------------------------------
 
     if(storeAssoPerm && is.null(fileLoadAssoPerm )){
@@ -685,7 +688,7 @@ netCompare <- function(x,
 
                            out <- list(diffsGlobal = NULL,
                                        diffsGlobalLCC = NULL,
-                                       absDiffCentr = NULL)
+                                       absDiffsCentr = NULL)
                            
                            for(i in c("diffavDiss", "diffavPath", "diffDensity", 
                                       "diffVertConnect", "diffEdgeConnect", 
@@ -694,7 +697,7 @@ netCompare <- function(x,
                              out$diffsGlobal[[i]] <- prop.tmp$diffsGlobal[[i]]
                              out$diffsGlobalLCC[[i]] <- prop.tmp$diffsGlobalLCC[[i]]
                            }
-                           
+
                            out$diffsGlobal[["diffnComp"]] <- 
                              prop.tmp$diffsGlobal$diffnComp
                            
@@ -738,8 +741,7 @@ netCompare <- function(x,
       close(fmat_counts1)
       close(fmat_counts2)
     }
-    
-    
+
     if(verbose){
       message("Calculating p-values ... ", appendLF = FALSE)
     }
@@ -777,10 +779,10 @@ netCompare <- function(x,
     absDiffsPermEigen <- matrix(0, nrow = nPerm, ncol = ncol(adja1))
 
     for(i in 1:nPerm){
-      absDiffsPermDeg[i,] <- propsPerm[[i]]$absDiffs$absDiffDeg
-      absDiffsPermBetw[i,] <- propsPerm[[i]]$absDiffs$absDiffBetw
-      absDiffsPermClose[i,] <- propsPerm[[i]]$absDiffs$absDiffClose
-      absDiffsPermEigen[i,] <- propsPerm[[i]]$absDiffs$absDiffEigen
+      absDiffsPermDeg[i,]   <- propsPerm[[i]]$absDiffsCentr$absDiffDeg
+      absDiffsPermBetw[i,]  <- propsPerm[[i]]$absDiffsCentr$absDiffBetw
+      absDiffsPermClose[i,] <- propsPerm[[i]]$absDiffsCentr$absDiffClose
+      absDiffsPermEigen[i,] <- propsPerm[[i]]$absDiffsCentr$absDiffEigen
     }
 
 ###########################
