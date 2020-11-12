@@ -72,7 +72,7 @@ calc_diff_props <- function(adja1, adja2, dissMat1, dissMat2, assoMat1, assoMat2
     avDiss2 <- 0
     avDiss2_lcc <- 0
   }
-  
+
   diffdiss <- abs(avDiss1 - avDiss2)
   diffdiss_lcc <- abs(avDiss1_lcc - avDiss2_lcc)
   
@@ -130,8 +130,8 @@ calc_diff_props <- function(adja1, adja2, dissMat1, dissMat2, assoMat1, assoMat2
     diffmod <- abs(modul1 - modul2)
     diffmod_lcc <- abs(modul1_lcc - modul2_lcc)
   } else{
-    modul1 <- modul2 <- modul1_lcc <- modul2_lcc <- NULL
-    diffmod <- diffmod_lcc <- NULL
+    modul1 <- modul2 <- modul1_lcc <- modul2_lcc <- NA
+    diffmod <- diffmod_lcc <- NA
   }
 
   #--------------------------------------------------------------------------
@@ -144,8 +144,8 @@ calc_diff_props <- function(adja1, adja2, dissMat1, dissMat2, assoMat1, assoMat2
     diffedgconnect <- abs(props1$edgeconnect - props2$edgeconnect)
     diffedgconnect_lcc <- abs(props1$edgeconnect_lcc - props2$edgeconnect_lcc)
   } else{
-    diffvertconnect <- diffvertconnect_lcc <- NULL
-    diffedgconnect <- diffedgconnect_lcc <- NULL
+    diffvertconnect <- diffvertconnect_lcc <- NA
+    diffedgconnect <- diffedgconnect_lcc <- NA
   }
 
   #--------------------------------------------------------------------------

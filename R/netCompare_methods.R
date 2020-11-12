@@ -31,7 +31,7 @@ summary.microNetComp <- function(object, groupNames = NULL, pAdjust = TRUE,
                                  showCentr = "all", 
                                  numbNodes = 10L, digits = 3L, 
                                  digitsPval = 6L, ...){
-
+  
   showCentr <- match.arg(showCentr, choices = c("all", "none", "degree", 
                                                 "betweenness", "closeness", 
                                                 "eigenvector"),
@@ -130,22 +130,26 @@ summary.microNetComp <- function(object, groupNames = NULL, pAdjust = TRUE,
                       "avDiss", "avPath")
   
 
-  if(is.null(object$globalProps$modularity1)){
+  if(is.na(object$properties$modularity1)){
     # exclude modularity
     glob_rnames <- glob_rnames[-3]
     glob_rnames_lcc <- glob_rnames_lcc[-3]
     glob_names <- glob_names[-3]
+    glob_names2 <- glob_names2[-3]
     glob_names_lcc <- glob_names_lcc[-3]
+    glob_names_lcc2 <- glob_names_lcc2[-3]
     
-    if(is.null(object$globalPropsLCC$vertConnect1)){
+    if(is.na(object$propertiesLCC$vertConnect1)){
       # exclude connectivity measures
       glob_rnames_lcc <- glob_rnames_lcc[-c(6,7)]
       glob_names_lcc <- glob_names_lcc[-c(6,7)]
+      glob_names_lcc2 <- glob_names_lcc2[-c(6,7)]
     } 
-  } else if(is.null(object$globalPropsLCC$vertConnect1)){
+  } else if(is.na(object$propertiesLCC$vertConnect1)){
     # exclude connectivity measures
     glob_rnames_lcc <- glob_rnames_lcc[-c(7,8)]
     glob_names_lcc <- glob_names_lcc[-c(7,8)]
+    glob_names_lcc2 <- glob_names_lcc2[-c(7,8)]
   }
   
   
