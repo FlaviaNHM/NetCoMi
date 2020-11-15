@@ -369,7 +369,10 @@ permtest_diff_asso <- function(countMat1, countMat2, assoMat1, assoMat2,
       mat.tmp[upper.tri(mat.tmp)] <- t(mat.tmp)[upper.tri(t(mat.tmp))]
       output[["pAdjustMat"]] <- mat.tmp
     }
-
+    
+    output[["testStatData"]] <- connectPairsOrig
+    
+    output[["testStatPerm"]] <- connectPairs
   }
 
   if("connect.variables" %in% method){

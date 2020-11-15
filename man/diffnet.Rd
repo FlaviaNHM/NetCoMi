@@ -113,13 +113,21 @@ The function returns an object of class \code{diffnet}. Depending on
   elements:\cr\cr
   \strong{Permutation tests:}
   \tabular{ll}{
-  \code{assoMat1,assoMat2}\tab matrices with estimated associations\cr
+  \code{diffMat}\tab matrix with absolute differences of associations that are
+  significantly different from zero; optional adjacency matrix\cr
+  \code{diffAdjustMat}\tab matrix with absolute differences of associations 
+  that are significantly different from zero (after multiple testing 
+  correction); optional adjacency matrix\cr
   \code{pvalsVec}\tab vector with p-values\cr
   \code{pAdjustVec}\tab vector with adjusted p-values\cr
-  \code{diffMat}\tab adjacency matrix (absolute difference of associations)\cr
-  \code{assoPerm}\tab list with two elements containing the association
-  matrices for the permuted data for each group (can be passed to
-  \code{diffnet} again)}
+  \code{pvalsMat}\tab matrix with p-values\cr
+  \code{pAdjustMat}\tab matrix with adjusted p-values\cr
+  \code{testStatData}\tab vector with test statistics (absolute differences 
+  of associations) for the original data\cr
+  \code{testStatPerm}\tab matrix with test statistics (absolute differences 
+  of associations) for the permuted data\cr
+  \code{assoMat1,assoMat2}\tab matrices with estimated associations (of the
+  original data)}
   \strong{Discordant:}
   \tabular{ll}{
   \code{assoMat1,assoMat2}\tab matrices with estimated correlations\cr
@@ -129,10 +137,17 @@ The function returns an object of class \code{diffnet}. Depending on
   is differentially correlated between the groups}
   \strong{Fisher's z-test:}
   \tabular{ll}{
-  \code{assoMat1,assoMat2}\tab matrices with estimated correlations\cr
+  \code{diffMat}\tab matrix with absolute differences of associations that are
+  significantly different from zero; optional adjacency matrix\cr
+  \code{diffAdjustMat}\tab matrix with absolute differences of associations 
+  that are significantly different from zero (after multiple testing 
+  correction); optional adjacency matrix\cr
   \code{pvalsVec}\tab vector with p-values\cr
   \code{pAdjustVec}\tab vector with adjusted p-values\cr
-  \code{diffMat}\tab adjacency matrix (absolute difference of correlations)}
+  \code{pvalsMat}\tab matrix with p-values\cr
+  \code{pAdjustMat}\tab matrix with adjusted p-values\cr
+  \code{assoMat1,assoMat2}\tab matrices with estimated associations (of the
+  original data)}
 }
 \description{
 Constructs a differential network for objects of class

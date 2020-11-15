@@ -82,13 +82,21 @@
 #'   elements:\cr\cr
 #'   \strong{Permutation tests:}
 #'   \tabular{ll}{
-#'   \code{assoMat1,assoMat2}\tab matrices with estimated associations\cr
+#'   \code{diffMat}\tab matrix with absolute differences of associations that are
+#'   significantly different from zero; optional adjacency matrix\cr
+#'   \code{diffAdjustMat}\tab matrix with absolute differences of associations 
+#'   that are significantly different from zero (after multiple testing 
+#'   correction); optional adjacency matrix\cr
 #'   \code{pvalsVec}\tab vector with p-values\cr
 #'   \code{pAdjustVec}\tab vector with adjusted p-values\cr
-#'   \code{diffMat}\tab adjacency matrix (absolute difference of associations)\cr
-#'   \code{assoPerm}\tab list with two elements containing the association
-#'   matrices for the permuted data for each group (can be passed to
-#'   \code{diffnet} again)}
+#'   \code{pvalsMat}\tab matrix with p-values\cr
+#'   \code{pAdjustMat}\tab matrix with adjusted p-values\cr
+#'   \code{testStatData}\tab vector with test statistics (absolute differences 
+#'   of associations) for the original data\cr
+#'   \code{testStatPerm}\tab matrix with test statistics (absolute differences 
+#'   of associations) for the permuted data\cr
+#'   \code{assoMat1,assoMat2}\tab matrices with estimated associations (of the
+#'   original data)}
 #'   \strong{Discordant:}
 #'   \tabular{ll}{
 #'   \code{assoMat1,assoMat2}\tab matrices with estimated correlations\cr
@@ -98,10 +106,17 @@
 #'   is differentially correlated between the groups}
 #'   \strong{Fisher's z-test:}
 #'   \tabular{ll}{
-#'   \code{assoMat1,assoMat2}\tab matrices with estimated correlations\cr
+#'   \code{diffMat}\tab matrix with absolute differences of associations that are
+#'   significantly different from zero; optional adjacency matrix\cr
+#'   \code{diffAdjustMat}\tab matrix with absolute differences of associations 
+#'   that are significantly different from zero (after multiple testing 
+#'   correction); optional adjacency matrix\cr
 #'   \code{pvalsVec}\tab vector with p-values\cr
 #'   \code{pAdjustVec}\tab vector with adjusted p-values\cr
-#'   \code{diffMat}\tab adjacency matrix (absolute difference of correlations)}
+#'   \code{pvalsMat}\tab matrix with p-values\cr
+#'   \code{pAdjustMat}\tab matrix with adjusted p-values\cr
+#'   \code{assoMat1,assoMat2}\tab matrices with estimated associations (of the
+#'   original data)}
 #'
 #' @examples
 #' # load data sets from American Gut Project (from SpiecEasi package)
@@ -303,7 +318,10 @@ diffnet <- function(x, diffMethod = "permute", discordThresh = 0.8,
                                        assoPerm = assoPerm)
 
       pvalsVec <- permResult$pvalsVec
-      pAdjust <- permResult$pAdjustVec
+      pAdjustVec <- permResult$pAdjustVec
+      
+      testStatData <- permResult$testStatData
+      testStatPerm <- permResult$testStatPerm
 
       nExceedsVec <- permResult$nExceedsVec
 
@@ -314,34 +332,62 @@ diffnet <- function(x, diffMethod = "permute", discordThresh = 0.8,
         message("Adjust for multiple testing using '", adjust, "' ... ",
                 appendLF = FALSE)
       }
-      pAdjust <- multAdjust(pvals = pvalsVec, adjust = adjust,
+      pAdjustVec <- multAdjust(pvals = pvalsVec, adjust = adjust,
                             trueNullMethod = trueNullMethod, verbose = verbose)
       if(verbose & adjust != "none") message("Done.")
-
+      
+      testStatData <- NULL
+      testStatPerm <- NULL
+  
       nExceedsVec <- NULL
     }
 
-    output = list(assoMat1 = assoMat1, assoMat2 = assoMat2)
-    output[["pvalsVec"]] <- pvalsVec
-    output[["pAdjustVec"]] <- pAdjust
-    #output[["nExceedsVec"]] <- nExceedsVec
-
-    diffMat <- abs(assoMat1 - assoMat2)
-    diffVec <- diffMat[lower.tri(diffMat)]
-
+    diffMat <- diffAdjustMat <- abs(assoMat1 - assoMat2)
+    diffVec <- diffVecAdjust <- diffMat[lower.tri(diffMat)]
+    
     # identify links
+    diffVec[pvalsVec > alpha] <- 0
+    
     if(adjust == "none"){
-      diffVec[pvalsVec > alpha] <- 0
+      diffVecAdjust <- diffVec
     } else if(adjust == "lfdr"){
-      diffVec[pAdjust > lfdrThresh] <- 0
+      diffVecAdjust[pAdjustVec > lfdrThresh] <- 0
     } else{
-      diffVec[pAdjust > alpha] <- 0
+      diffVecAdjust[pAdjustVec > alpha] <- 0
     }
-
+    
     diffMat[lower.tri(diffMat)] <- diffVec
     diffMat[upper.tri(diffMat)] <- t(diffMat)[upper.tri(t(diffMat))]
-
+    
+    diffAdjustMat[lower.tri(diffAdjustMat)] <- diffVecAdjust
+    diffAdjustMat[upper.tri(diffAdjustMat)] <- 
+      t(diffAdjustMat)[upper.tri(t(diffAdjustMat))]
+    
+    pvalsMat <- diffMat
+    pvalsMat[lower.tri(pvalsMat)] <- pvalsVec
+    pvalsMat[upper.tri(pvalsMat)] <- t(pvalsMat)[upper.tri(t(pvalsMat))]
+    
+    pAdjustMat <- diffMat
+    pAdjustMat[lower.tri(pAdjustMat)] <- pAdjustVec
+    pAdjustMat[upper.tri(pAdjustMat)] <- t(pAdjustMat)[upper.tri(t(pAdjustMat))]
+    
+    output = list()
+    
     output[["diffMat"]] <- diffMat
+    output[["diffAdjustMat"]] <- diffAdjustMat
+    
+    output[["pvalsVec"]] <- pvalsVec
+    output[["pAdjustVec"]] <- pAdjustVec
+    #output[["nExceedsVec"]] <- nExceedsVec
+    
+    output[["pvalsMat"]] <- pvalsMat
+    output[["pAdjustMat"]] <- pAdjustMat
+
+    output[["testStatData"]] <- testStatData
+    output[["testStatPerm"]] <- testStatPerm
+    
+    output[["assoMat1"]] <- assoMat1
+    output[["assoMat2"]] <- assoMat2
 
   }else{ #Fisher's z-test
 
@@ -365,29 +411,61 @@ diffnet <- function(x, diffMethod = "permute", discordThresh = 0.8,
       message("Adjust for multiple testing using '", adjust, "' ... ",
               appendLF = FALSE)
     }
-    pAdjust <- multAdjust(pvals = pvalsVec, adjust = adjust,
-                          trueNullMethod = trueNullMethod, verbose = verbose)
+    
+    pAdjustVec <- multAdjust(pvals = pvalsVec, adjust = adjust,
+                             trueNullMethod = trueNullMethod, verbose = verbose)
+    
     if(verbose & adjust != "none") message("Done.")
-
-    output = list(assoMat1 = assoMat1, assoMat2 = assoMat2)
-    output[["pvalsVec"]] <- pvalsVec
-    output[["pAdjustVec"]] <- pAdjust
-
-    diffMat <- abs(assoMat1 - assoMat2)
-    diag(diffMat) <- 0
-    diffVec <- diffMat[lower.tri(diffMat)]
-
+    
+    diffMat <- diffAdjustMat <- abs(assoMat1 - assoMat2)
+    diag(diffMat) <- diag(diffAdjustMat) <- 0
+    
+    diffVec <- diffVecAdjust <- diffMat[lower.tri(diffMat)]
+    
+    diffVec[pvalsVec > alpha] <- 0
+    
     # identify links
-    if(adjust == "lfdr"){
-      diffVec[pAdjust > lfdrThresh] <- 0
+    if(adjust == "none"){
+      diffVecAdjust <- diffVec
+      
+    } else if(adjust == "lfdr"){
+      diffVecAdjust[pAdjustVec > lfdrThresh] <- 0
+      
     } else{
-      diffVec[pAdjust > alpha] <- 0
+      diffVecAdjust[pAdjustVec > alpha] <- 0
     }
 
+    
     diffMat[lower.tri(diffMat)] <- diffVec
     diffMat[upper.tri(diffMat)] <- t(diffMat)[upper.tri(t(diffMat))]
+    
+    diffAdjustMat[lower.tri(diffAdjustMat)] <- diffVecAdjust
+    diffAdjustMat[upper.tri(diffAdjustMat)] <- 
+      t(diffAdjustMat)[upper.tri(t(diffAdjustMat))]
+    
+    
+    pvalsMat <- diffMat
+    pvalsMat[lower.tri(pvalsMat)] <- pvalsVec
+    pvalsMat[upper.tri(pvalsMat)] <- t(pvalsMat)[upper.tri(t(pvalsMat))]
+    
+    pAdjustMat <- diffMat
+    pAdjustMat[lower.tri(pAdjustMat)] <- pAdjustVec
+    pAdjustMat[upper.tri(pAdjustMat)] <- t(pAdjustMat)[upper.tri(t(pAdjustMat))]
+    
+    output <- list()
+    
     output[["diffMat"]] <- diffMat
-
+    output[["diffAdjustMat"]] <- diffAdjustMat
+    
+    output[["pvalsVec"]] <- pvalsVec
+    output[["pAdjustVec"]] <- pAdjustVec
+    #output[["nExceedsVec"]] <- nExceedsVec
+    
+    output[["pvalsMat"]] <- pvalsMat
+    output[["pAdjustMat"]] <- pAdjustMat
+    
+    output[["assoMat1"]] <- assoMat1
+    output[["assoMat2"]] <- assoMat2
   }
 
   if(verbose & all(diffMat == 0)){
@@ -395,6 +473,7 @@ diffnet <- function(x, diffMethod = "permute", discordThresh = 0.8,
   }
 
   output[["groups"]] <- x$groups
+  output[["diffMethod"]] <- diffMethod
   output[["call"]] <- match.call()
   class(output) <- "diffnet"
   return(output)
