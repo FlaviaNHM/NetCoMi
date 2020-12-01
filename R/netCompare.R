@@ -65,6 +65,9 @@
 #' @param fileStoreCountsPerm character vector with two elements giving the 
 #'   names of two files storing the permuted count matrices belonging to the 
 #'   two groups.
+#' @param returnPermProps logical. If \code{TRUE}, network properties for the
+#'   permuted data are returned (as \code{permDiffGlobal, permDiffGlobalLCC},
+#'   and \code{permDiffCentr}).
 #' @param assoPerm a list with two elements used for the permutation procedure.
 #'   Each entry must contain association matrices for \code{"nPerm"}
 #'   permutations. This can be the \code{"assoPerm"} value as part of the
@@ -84,9 +87,10 @@
 #'   the group labels are randomly reassigned to the samples while the group
 #'   sizes are kept. The associations are then re-estimated for each permuted
 #'   data set. The p-values are calcutated as the proportion of
-#'   "permutation-differences" being larger than the observed difference. A
-#'   pseudocount is added to the numerator and denominator in order to avoid
-#'   zero p-values. The p-values should be adjusted for multiple testing.
+#'   "permutation-differences" being greater than or equal to the observed 
+#'   difference. A pseudocount is added to the numerator and denominator in 
+#'   order to avoid zero p-values. The p-values should be adjusted for 
+#'   multiple testing.
 #'
 #'   \strong{Jaccard's index:}\cr
 #'   Jaccard's index expresses for each centrality measure how equal the sets of
@@ -108,100 +112,126 @@
 #'   is in accordance with the explanations in \cite{Qannari et al. (2014)},
 #'   where a p-value below the alpha levels means that ARI is significantly
 #'   higher than expected for two random clusterings.
-#' @return Returned is an object of class \code{microNetComp}. Important
-#'   elements are the following:\cr
-#'   \strong{With and without permutation tests:}
+#' @return Returned is an object of class \code{microNetComp} with the following
+#'   elements:\cr
 #'   \tabular{ll}{
-#'   \code{jaccDeg,jaccBetw,jaccClose,jaccEigen}\tab values of Jaccard's index
+#'   \code{jaccDeg,jaccBetw,jaccClose,jaccEigen}\tab Values of Jaccard's index
 #'   for the centrality measures\cr
 #'   \code{jaccHub}\tab Jaccard index for the sets of hub nodes\cr
-#'   \code{randInd}\tab calculated Rand index\cr
-#'   \code{properties}\tab a list with calculated network properties for both
-#'   groups\cr
-#'   \code{diffs}\tab vectors with differences between the centrality values\cr
-#'   \code{countMatrices}\tab the two count matrices returned
+#'   \code{randInd}\tab Calculated Rand index\cr
+#'   \code{properties}\tab List with calculated network properties\cr
+#'   \code{propertiesLCC}\tab List with calculated network properties of the 
+#'   largest connected component (LCC)\cr
+#'   \code{diffGlobal}\tab Vectors with differences of global properties\cr
+#'   \code{diffGlobalLCC}\tab Vectors with differences of global properties for
+#'   the LCC\cr
+#'   \code{diffCent}\tab Vectors with differences of the centrality values\cr
+#'   \code{countMatrices}\tab The two count matrices returned
 #'   from \code{netConstruct}\cr
-#'   \code{assoMatrices}\tab the two association matrices returned
+#'   \code{assoMatrices}\tab The two association matrices returned
 #'   from \code{netConstruct}\cr
-#'   \code{dissMatrices}\tab the two dissimilarity matrices returned
+#'   \code{dissMatrices}\tab The two dissimilarity matrices returned
 #'   from \code{netConstruct}\cr
-#'   \code{adjaMatrices}\tab the two adjacency matrices returned
+#'   \code{adjaMatrices}\tab The two adjacency matrices returned
 #'   from \code{netConstruct}\cr
-#'   \code{groups}\tab the group names returned from \code{netConstruct}
+#'   \code{groups}\tab Group names returned from \code{netConstruct}\cr
+#'   \code{paramsProperties}\tab Parameters used for network analysis
 #'   }
 #'   \strong{Additional output if permutation tests are conducted:}
-#'   \tabular{ll}{
-#'   \code{avPath}\tab difference between average path lengths with
-#'   corresponding p-value\cr
-#'   \code{clustCoef}\tab difference between the global clustering coefficients
-#'   with corresponding p-value\cr
-#'   \code{modul}\tab difference between modularity values for the
-#'   determined clusterings with corresponding p-value\cr
-#'   \code{vertConnect}\tab difference between the vertex connectivity values
-#'   with corresponding p-value\cr
-#'   \code{edgeConnect}\tab difference between the edge connectivity values
-#'   with corresponding p-value\cr
-#'   \code{density}\tab difference between density values with corresponding
-#'   p-value\cr
-#'   \code{pvalDiffCentr}\tab p-values of the tests for differential centrality
-#'   values\cr
-#'   \code{pvalDiffCentrAdjust}\tab adjusted p-values of the tests for
-#'   differential centrality values\
-#'   }
-#'   \strong{Additional output if NO permutation tests are conducted:}
-#'   \tabular{ll}{
-#'   \code{diffPath}\tab difference between average path lengths\cr
-#'   \code{diffClust}\tab difference between the global clustering
-#'   coefficients\cr
-#'   \code{diffModul}\tab difference between modularity values for the
-#'   determined clusterings\cr
-#'   \code{diffVertConnect}\tab difference between the vertex connectivity
-#'   values\cr
-#'   \code{diffEdgeConnect}\tab difference between the edge connectivity
-#'   values\cr
-#'   \code{diffDensity}\tab difference between the density values
-#'   }
+#'  \tabular{ll}{
+#'  \code{pvalDiffGlobal}\tab P-values of the tests for differential global
+#'  properties\cr
+#'  \code{pvalDiffGlobalLCC}\tab P-values of the tests for differential
+#'  global properties in the LCC\cr
+#'  \code{pvalDiffCentr}\tab P-values of the tests for differential centrality
+#'  values\cr
+#'  \code{pvalDiffCentrAdjust}\tab Adjusted p-values of the tests for
+#'  differential centrality values\cr
+#'  \code{permDiffGlobal}\tab \code{nPerm} x 10 matrix containing the absolute 
+#'  differences of the ten global network properties (computed for the whole 
+#'  network) for all \code{nPerm} permutations\cr
+#'  \code{permDiffGlobalLCC}\tab \code{nPerm} x 11 matrix containing the 
+#'  absolute differences of the eleven global network properties (computed for 
+#'  the LCC) for all \code{nPerm} permutations\cr
+#'  \code{permDiffCentr}\tab List with absolute differences of the four 
+#'  centrality measures for all \code{nPerm} permutations. Each list contains 
+#'  a \code{nPerm} x \code{nNodes} matrix.
+#'  }
 #' @examples
-#' # load data sets from American Gut Project (from SpiecEasi package)
+#' # Load data sets from American Gut Project (from SpiecEasi package)
 #' data("amgut1.filt")
-#'
-#' # generate a random group vector
+#' 
+#' # Generate a random group vector
 #' set.seed(123456)
 #' group <- sample(1:2, nrow(amgut1.filt), replace = TRUE)
-#'
-#' # network construction:
+#' 
+#' # Network construction:
 #' amgut_net <- netConstruct(amgut1.filt, group = group,
 #'                           measure = "pearson",
 #'                           filtTax = "highestVar",
 #'                           filtTaxPar = list(highestVar = 30),
 #'                           zeroMethod = "pseudo", normMethod = "clr")
-#'
-#' # network analysis:
-#' amgut_props <- netAnalyze(amgut_net, clustMethod = "cluster_fast_greedy",
-#'                           hubPar = "eigenvector")
-#'
-#' # network plot:
+#' 
+#' # Network analysis:
+#' amgut_props <- netAnalyze(amgut_net, clustMethod = "cluster_fast_greedy")
+#' 
+#' # Network plot:
 #' plot(amgut_props, sameLayout = TRUE)
-#'
-#' # network comparison:
-#' # without permutation tests:
+#' 
+#' #--------------------------
+#' # Network comparison:
+#' 
+#' # Without permutation tests:
 #' amgut_comp1 <- netCompare(amgut_props, permTest = FALSE)
 #' summary(amgut_comp1)
-#' summary(amgut_comp1, showCentr = "degree", numbNodes = 20)
-#'
+#' 
 #' \donttest{
-#' # with permutation tests (with only 100 permutations to decrease runtime):
-#' amgut_comp2 <- netCompare(amgut_props, permTest = TRUE, nPerm = 100L, cores = 4L)
-#'
-#' # the estimated association matrices for the permuted data can be passed to
-#' # netCompare in order to reduce execution time:
-#' amgut_comp3 <- netCompare(amgut_props, permTest = TRUE, nPerm = 100L,
-#'                           assoPerm = amgut_comp2$assoPerm)
-#'
-#' summary(amgut_comp2)
-#' summary(amgut_comp3)
+#'   # With permutation tests (with only 100 permutations to decrease runtime):
+#'   amgut_comp2 <- netCompare(amgut_props, 
+#'                             permTest = TRUE, nPerm = 100L, cores = 1L, 
+#'                             storeCountsPerm = TRUE, 
+#'                             fileStoreCountsPerm = c("countsPerm1", "countsPerm2"),
+#'                             storeAssoPerm = TRUE, 
+#'                             fileStoreAssoPerm = "assoPerm",
+#'                             seed = 123456)
+#'   
+#'   # Rerun with a different adjustment method ...
+#'   # ... using the stored permutation count matrices
+#'   amgut_comp3 <- netCompare(amgut_props, adjust = "BH",
+#'                             permTest = TRUE, nPerm = 100L, 
+#'                             fileLoadCountsPerm = c("countsPerm1", "countsPerm2"),
+#'                             seed = 123456)
+#'   
+#'   # ... using the stored permutation association matrices
+#'   amgut_comp4 <- netCompare(amgut_props, adjust = "BH",
+#'                             permTest = TRUE, nPerm = 100L, 
+#'                             fileLoadAssoPerm = "assoPerm",
+#'                             seed = 123456)
+#'   
+#'   # amgut_comp3 and amgut_comp4 should be equal
+#'   all.equal(amgut_comp3$adjaMatrices, amgut_comp4$adjaMatrices)
+#'   all.equal(amgut_comp3$properties, amgut_comp4$properties)
+#'   
+#'   summary(amgut_comp2)
+#'   summary(amgut_comp3)
+#'   summary(amgut_comp4)
+#'   
+#'   #--------------------------
+#'   # Use 'createAssoPerm' to create "permuted" count and association matrices
+#'   createAssoPerm(amgut_props, nPerm = 100, 
+#'                  computeAsso = TRUE,
+#'                  fileStoreAssoPerm = "assoPerm",
+#'                  storeCountsPerm = TRUE, 
+#'                  fileStoreCountsPerm = c("countsPerm1", "countsPerm2"),
+#'                  append = FALSE, seed = 123456)
+#'   
+#'   amgut_comp5 <- netCompare(amgut_props, permTest = TRUE, nPerm = 100L, 
+#'                             fileLoadAssoPerm = "assoPerm")
+#'   
+#'   all.equal(amgut_comp3$properties, amgut_comp5$properties)
+#'   
+#'   summary(amgut_comp5)
 #' }
-#'
 #' @seealso \code{\link{summary.microNetComp}}, \code{\link{netConstruct}},
 #'   \code{\link{netAnalyze}}
 #' @references \insertRef{benjamini2000adaptive}{NetCoMi} \cr
@@ -233,6 +263,7 @@ netCompare <- function(x,
                        fileStoreAssoPerm = "assoPerm",
                        storeCountsPerm = FALSE,
                        fileStoreCountsPerm = c("countsPerm1", "countsPerm2"),
+                       returnPermProps = FALSE,
                        assoPerm = NULL, dissPerm = NULL){
 
   stopifnot(class(x) =="microNetProps")
@@ -784,45 +815,11 @@ netCompare <- function(x,
       absDiffsPermClose[i,] <- propsPerm[[i]]$absDiffsCentr$absDiffClose
       absDiffsPermEigen[i,] <- propsPerm[[i]]$absDiffsCentr$absDiffEigen
     }
-
-###########################
-    # if(storeAssoPerm){
-    #   if(distNet){
-    #     dissEstPerm1 <- dissEstPerm2 <- list()
-    #     for(i in 1:nPerm){
-    #       dissEstPerm1[[i]] <- propsPerm[[i]]$dissEst1
-    #       dissEstPerm2[[i]] <- propsPerm[[i]]$dissEst2
-    #     }
-    #     assoEstPerm1 <- assoEstPerm2 <- NULL
-    #   } else{
-    #     assoEstPerm1 <- assoEstPerm2 <- list()
-    #     for(i in 1:nPerm){
-    #       assoEstPerm1[[i]] <- propsPerm[[i]]$assoEst1
-    #       assoEstPerm2[[i]] <- propsPerm[[i]]$assoEst2
-    #     }
-    #     dissEstPerm1 <- dissEstPerm2 <- NULL
-    #   }
-    # } else{
-    #   assoEstPerm1 <- assoEstPerm2 <- NULL
-    #   dissEstPerm1 <- dissEstPerm2 <- NULL
-    # }
-    # 
-    # 
-    # 
-    # if(storePermCounts){
-    #   countsPerm1 <- countsPerm2 <- list()
-    #   
-    #   for(i in 1:nPerm){
-    #     countsPerm1[[i]] <- propsPerm[[i]]$permCounts1
-    #     countsPerm2[[i]] <- propsPerm[[i]]$permCounts2
-    #   }
-    # 
-    # } else{
-    #   countsPerm1 <- NULL
-    #   countsPerm2 <- NULL
-    # }
-
-    #############################
+    
+    permresults_centr <- list(degree = absDiffsPermDeg,
+                              between = absDiffsPermBetw,
+                              close = absDiffsPermClose,
+                              eigen = absDiffsPermEigen)
 
     pvalnames <- paste0("pval", selnames)
 
@@ -939,6 +936,13 @@ netCompare <- function(x,
                    groups = list(group1 = xgroups[1], group2 = xgroups[2]),
                    paramsProperties = x$paramsProperties,
                    call = match.call())
+    
+    if(returnPermProps){
+      output$permDiffGlobal <- results_global
+      output$permDiffGlobalLCC <- results_global_lcc
+      output$permDiffCentr <- permresults_centr
+    }
+
   } else{
     output <- list(jaccDeg = props$jaccDeg,
                    jaccBetw = props$jaccBetw,
